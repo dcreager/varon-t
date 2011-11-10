@@ -2,10 +2,10 @@
 /.build/
 
 RELEASE-VERSION
-PLEASE_DEFINE_APPNAME.pc
+varon-t.pc
 
-/PLEASE_DEFINE_APPNAME*.tar.gz
-/PLEASE_DEFINE_APPNAME*.tar.bz2
+/varon-t*.tar.gz
+/varon-t*.tar.bz2
 
 *.[oa]
 *.os

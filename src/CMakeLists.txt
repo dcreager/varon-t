@@ -12,17 +12,16 @@ include_directories(../include)
 #-----------------------------------------------------------------------
 # Build the library
 
-file(GLOB_RECURSE LIBAPPNAME_SRC libAPPNAME/*.c)
+file(GLOB_RECURSE LIBVARON_T_SRC libvaron-t/*.c)
 
-add_library(libAPPNAME SHARED ${LIBAPPNAME_SRC})
-set_target_properties(libAPPNAME PROPERTIES
-    COMPILE_DEFINITIONS G_LOG_DOMAIN="APPNAME"
-    OUTPUT_NAME appname
+add_library(libvaron_t SHARED ${LIBVARON_T_SRC})
+set_target_properties(libvaron_t PROPERTIES
+    OUTPUT_NAME varon-t
     SOVERSION 0.0.0)
-target_link_libraries(libAPPNAME
-    ${GLIB_LIBRARIES})
+target_link_libraries(libvaron_t
+    ${CORK_LIBRARIES})
 
-install(TARGETS libAPPNAME
+install(TARGETS libvaron_t
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib)
 
@@ -30,6 +29,6 @@ install(TARGETS libAPPNAME
 # Generate the pkg-config file
 
 set(prefix ${CMAKE_INSTALL_PREFIX})
-configure_file(libAPPNAME.pc.in libAPPNAME.pc)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libAPPNAME.pc
+configure_file(varon-t.pc.in varon-t.pc)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/varon-t.pc
         DESTINATION lib/pkgconfig)
