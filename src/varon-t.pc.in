@@ -1,0 +1,13 @@
+prefix=@prefix@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+sharedir=${prefix}/share
+sphinxdir=${sharedir}/doc/varon-t/html
+
+Name: varon-t
+Description: Extremely efficient lock-free ring buffer
+Version: @VERSION@
+URL: http://github.com/redjack/varon-t/
+Libs: -L${libdir} -lvaron-t
+Cflags: -I${includedir}
