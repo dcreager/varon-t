@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------
-# Copyright © 2011, RedJack, LLC.
+# Copyright © 2012, RedJack, LLC.
 # All rights reserved.
 #
 # Please see the LICENSE.txt file in this distribution for license
@@ -36,6 +36,10 @@ find_package(PkgConfig)
 pkg_check_modules(CORK REQUIRED libcork)
 include_directories(${CORK_INCLUDE_DIRS})
 link_directories(${CORK_LIBRARY_DIRS})
+
+pkg_check_modules(TACONIC REQUIRED taconic)
+include_directories(${TACONIC_INCLUDE_DIRS})
+link_directories(${TACONIC_LIBRARY_DIRS})
 
 #-----------------------------------------------------------------------
 # Set some options

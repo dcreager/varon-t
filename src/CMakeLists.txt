@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------
-# Copyright © 2011, RedJack, LLC.
+# Copyright © 2012, RedJack, LLC.
 # All rights reserved.
 #
 # Please see the LICENSE.txt file in this distribution for license
@@ -12,16 +12,16 @@ include_directories(../include)
 #-----------------------------------------------------------------------
 # Build the library
 
-file(GLOB_RECURSE LIBVARON_T_SRC libvaron-t/*.c)
+file(GLOB_RECURSE LIBVRT_SRC libvrt/*.c)
 
-add_library(libvaron_t SHARED ${LIBVARON_T_SRC})
-set_target_properties(libvaron_t PROPERTIES
-    OUTPUT_NAME varon-t
+add_library(libvrt SHARED ${LIBVRT_SRC})
+set_target_properties(libvrt PROPERTIES
+    OUTPUT_NAME vrt
     SOVERSION 0.0.0)
-target_link_libraries(libvaron_t
-    ${CORK_LIBRARIES})
+target_link_libraries(libvrt
+    ${CORK_LIBRARIES} ${TACONIC_LIBRARIES})
 
-install(TARGETS libvaron_t
+install(TARGETS libvrt
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib)
 
