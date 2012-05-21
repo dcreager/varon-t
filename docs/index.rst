@@ -14,6 +14,12 @@ Contents
    :maxdepth: 2
 
    introduction
+   queue-management
+   value-objects
+   producers
+   consumers
+   yield-strategies
+   example
 
 
 Indices and tables
