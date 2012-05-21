@@ -38,22 +38,22 @@ struct vrt_queue_client {
 /** Run each client in a separate thread */
 int
 vrt_test_queue_threaded(struct vrt_queue *q,
-                            struct vrt_queue_client *clients,
-                            vrt_clock *elapsed);
+                        struct vrt_queue_client *clients,
+                        vrt_clock *elapsed);
 
 /** Run each client in a separate thread, but use spin-waits instead of
  * thread yields */
 int
 vrt_test_queue_threaded_spin(struct vrt_queue *q,
-                                 struct vrt_queue_client *clients,
-                                 vrt_clock *elapsed);
+                             struct vrt_queue_client *clients,
+                             vrt_clock *elapsed);
 
 /** Run each client in a separate thread, but use the hybrid yield
  * strategy */
 int
 vrt_test_queue_threaded_hybrid(struct vrt_queue *q,
-                                   struct vrt_queue_client *clients,
-                                   vrt_clock *elapsed);
+                               struct vrt_queue_client *clients,
+                               vrt_clock *elapsed);
 
 
 #endif /* VRT_TESTS_QUEUE */

@@ -18,7 +18,8 @@
 #include <libcork/core.h>
 #include <libcork/helpers/errors.h>
 
-#include <vrt/queue.h>
+#include "vrt/queue.h"
+#include "vrt/value.h"
 
 
 /*-----------------------------------------------------------------------

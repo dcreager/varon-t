@@ -19,7 +19,8 @@
 #include <check.h>
 
 #include "vrt/queue.h"
-#include "vrt/state.h"
+#include "vrt/value.h"
+#include "vrt/yield.h"
 
 #include "helpers.h"
 #include "integers.h"

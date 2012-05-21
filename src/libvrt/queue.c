@@ -16,8 +16,20 @@
 #include <libcork/helpers/errors.h>
 
 #include "vrt/atomic.h"
+#include "vrt/error.h"
 #include "vrt/queue.h"
-#include "vrt/state.h"
+
+
+#ifndef VRT_DEBUG_QUEUE
+#define VRT_DEBUG_QUEUE 0
+#endif
+#if VRT_DEBUG_QUEUE
+#include <stdio.h>
+#define DEBUG(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define DEBUG(...) /* do nothing */
+#endif
+
 
 #define MINIMUM_QUEUE_SIZE  16
 #define DEFAULT_QUEUE_SIZE  65536

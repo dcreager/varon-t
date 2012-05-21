@@ -8,109 +8,20 @@
  * ----------------------------------------------------------------------
  */
 
-#ifndef VRT_QUEUE
-#define VRT_QUEUE
+#ifndef VRT_QUEUE_H
+#define VRT_QUEUE_H
 
 #include <libcork/core.h>
 #include <libcork/ds.h>
 
 #include <vrt/atomic.h>
-#include <vrt/state.h>
+#include <vrt/value.h>
+#include <vrt/yield.h>
 
 
 #ifndef VRT_QUEUE_STATS
 #define VRT_QUEUE_STATS  0
 #endif
-
-/*-----------------------------------------------------------------------
- * Yielding strategies
- */
-
-/* Each producer and consumer will yield to other queue clients when one
- * of their operations wouldn't succeed immediately.  Right now, we
- * support a number of different yielding strategies. */
-
-struct vrt_yield_strategy {
-    /** Yields control to other producers and consumers. */
-    int
-    (*yield)(struct vrt_yield_strategy *self, bool first,
-             const char *queue_name, const char *name);
-
-    /** Frees this yield strategy. */
-    void
-    (*free)(struct vrt_yield_strategy *self);
-};
-
-#define vrt_yield_strategy_yield(self, first, qn, n) \
-    ((self)->yield((self), (first), (qn), (n)))
-
-#define vrt_yield_strategy_free(self) \
-    ((self)->free((self)))
-
-/* A yield strategy that simply does a spin-loop.  (Only works if each
- * producer/consumer is in a separate thread.) */
-struct vrt_yield_strategy *
-vrt_yield_strategy_spin_wait(void);
-
-/* A yield strategy that simply does a short spin-loop and then yields
- * to other threads.  (Only works if each producer/consumer is in a
- * separate thread.) */
-struct vrt_yield_strategy *
-vrt_yield_strategy_threaded(void);
-
-/* A yield strategy that yields to other coroutines within the same
- * thread for the first couple of waits, and then falls back on
- * progressively more intense yields. */
-struct vrt_yield_strategy *
-vrt_yield_strategy_hybrid(void);
-
-
-/*-----------------------------------------------------------------------
- * Value objects
- */
-
-enum vrt_value_special {
-    VRT_VALUE_NONE = 0,
-    VRT_VALUE_EOF,
-    VRT_VALUE_HOLE,
-    VRT_VALUE_FLUSH
-};
-
-struct vrt_value;
-
-/** The ID of a value within the queue that manages it */
-typedef int  vrt_value_id;
-
-/* Each Varon-T disruptor queue manages a list of _values_.  The queue
- * manages the lifecycle of the value.  Each value type must implement the
- * following interface.  */
-struct vrt_value_type {
-    /** A type identifier for this value type. */
-    cork_hash  type_id;
-
-    /** Allocate an instance of this type. */
-    struct vrt_value *
-    (*new_value)(const struct vrt_value_type *type);
-
-    /** Free an instance of this type. */
-    void
-    (*free_value)(const struct vrt_value_type *type,
-                  struct vrt_value *value);
-};
-
-/** Instantiate a new value of the given type. */
-#define vrt_value_new(type) \
-    ((type)->new_value((type)))
-
-/** Free a value of the given type. */
-#define vrt_value_free(type, value) \
-    ((type)->free_value((type), (value)))
-
-/** The superclass of a value that's managed by a Varon-T queue. */
-struct vrt_value {
-    vrt_value_id  id;
-    int  special;
-};
 
 
 /*-----------------------------------------------------------------------
@@ -170,7 +81,7 @@ struct vrt_queue {
 /** Allocate a new queue. */
 struct vrt_queue *
 vrt_queue_new(const char *name, const struct vrt_value_type *value_type,
-                  unsigned int value_count);
+              unsigned int value_count);
 
 /** Free a queue. */
 void
@@ -291,7 +202,7 @@ struct vrt_producer {
  * then we'll calculate a reasonable default batch size. */
 struct vrt_producer *
 vrt_producer_new(const char *name, unsigned int batch_size,
-                     struct vrt_queue *q);
+                 struct vrt_queue *q);
 
 /** Free a producer */
 void
@@ -301,8 +212,7 @@ vrt_producer_free(struct vrt_producer *p);
  * returns without an error, a value instance will be loaded into @ref
  * value.  The caller has full control over the contents of this value. */
 int
-vrt_producer_claim(struct vrt_producer *p,
-                       struct vrt_value **value);
+vrt_producer_claim(struct vrt_producer *p, struct vrt_value **value);
 
 /** Publish the most recently claimed value.  This function won't return
  * until the value is successfully published to the queue's consumers.
@@ -442,4 +352,5 @@ vrt_consumer_set_cursor(struct vrt_consumer *c, vrt_value_id value)
 void
 vrt_report_consumer(struct vrt_consumer *c);
 
-#endif /* VRT_QUEUE */
+
+#endif /* VRT_QUEUE_H */
