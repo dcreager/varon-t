@@ -55,7 +55,7 @@ min_power_of_2(unsigned int in)
 
 
 struct vrt_queue *
-vrt_queue_new(const char *name, const struct vrt_value_type *value_type,
+vrt_queue_new(const char *name, struct vrt_value_type *value_type,
               unsigned int size)
 {
     struct vrt_queue  *q = cork_new(struct vrt_queue);

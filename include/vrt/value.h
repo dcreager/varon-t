@@ -36,12 +36,11 @@ typedef int  vrt_value_id;
 struct vrt_value_type {
     /** Allocate an instance of this type. */
     struct vrt_value *
-    (*new_value)(const struct vrt_value_type *type);
+    (*new_value)(struct vrt_value_type *type);
 
     /** Free an instance of this type. */
     void
-    (*free_value)(const struct vrt_value_type *type,
-                  struct vrt_value *value);
+    (*free_value)(struct vrt_value_type *type, struct vrt_value *value);
 };
 
 /** Instantiate a new value of the given type. */

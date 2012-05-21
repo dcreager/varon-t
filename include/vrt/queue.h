@@ -53,7 +53,7 @@ struct vrt_queue {
     unsigned int  value_mask;
 
     /** The type of values managed by this queue. */
-    const struct vrt_value_type  *value_type;
+    struct vrt_value_type  *value_type;
 
     /** The producers feeding this queue. */
     vrt_producer_array  producers;
@@ -80,7 +80,7 @@ struct vrt_queue {
 
 /** Allocate a new queue. */
 struct vrt_queue *
-vrt_queue_new(const char *name, const struct vrt_value_type *value_type,
+vrt_queue_new(const char *name, struct vrt_value_type *value_type,
               unsigned int value_count);
 
 /** Free a queue. */

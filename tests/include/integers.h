@@ -31,7 +31,7 @@ struct vrt_value_int {
     int32_t  value;
 };
 
-const struct vrt_value_type *
+struct vrt_value_type *
 vrt_value_type_int(void);
 
 

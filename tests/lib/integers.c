@@ -15,28 +15,27 @@
 #include "integers.h"
 
 static struct vrt_value *
-vrt_value_int_new(const struct vrt_value_type *type)
+vrt_value_int_new(struct vrt_value_type *type)
 {
     struct vrt_value_int  *self = cork_new(struct vrt_value_int);
     return &self->parent;
 }
 
 static void
-vrt_value_int_free(const struct vrt_value_type *type,
-                       struct vrt_value *vself)
+vrt_value_int_free(struct vrt_value_type *type, struct vrt_value *vself)
 {
     struct vrt_value_int  *self =
         cork_container_of(vself, struct vrt_value_int, parent);
     free(self);
 }
 
-static const struct vrt_value_type  _vrt_value_type_int = {
+static struct vrt_value_type  _vrt_value_type_int = {
     vrt_value_int_new,
     vrt_value_int_free
 };
 
 
-const struct vrt_value_type *
+struct vrt_value_type *
 vrt_value_type_int(void)
 {
     return &_vrt_value_type_int;
