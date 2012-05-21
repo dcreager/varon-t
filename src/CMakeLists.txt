@@ -12,7 +12,10 @@ include_directories(../include)
 #-----------------------------------------------------------------------
 # Build the library
 
-file(GLOB_RECURSE LIBVRT_SRC libvrt/*.c)
+set(LIBVRT_SRC
+    libvrt/queue.c
+    libvrt/yield.c
+)
 
 add_library(libvrt SHARED ${LIBVRT_SRC})
 set_target_properties(libvrt PROPERTIES
