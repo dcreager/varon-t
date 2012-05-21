@@ -26,9 +26,6 @@
  * Integer value type
  */
 
-/* hash of "vrt:Integer" */
-#define INT_TYPE_ID 0x7a14bd25
-
 struct vrt_value_int {
     struct vrt_value  parent;
     int32_t  value;

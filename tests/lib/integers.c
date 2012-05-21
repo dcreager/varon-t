@@ -31,7 +31,6 @@ vrt_value_int_free(const struct vrt_value_type *type,
 }
 
 static const struct vrt_value_type  _vrt_value_type_int = {
-    INT_TYPE_ID,
     vrt_value_int_new,
     vrt_value_int_free
 };

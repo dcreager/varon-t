@@ -34,9 +34,6 @@ typedef int  vrt_value_id;
  * manages the lifecycle of the value.  Each value type must implement the
  * following interface.  */
 struct vrt_value_type {
-    /** A type identifier for this value type. */
-    cork_hash  type_id;
-
     /** Allocate an instance of this type. */
     struct vrt_value *
     (*new_value)(const struct vrt_value_type *type);
