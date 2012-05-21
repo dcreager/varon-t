@@ -37,10 +37,6 @@ pkg_check_modules(CORK REQUIRED libcork)
 include_directories(${CORK_INCLUDE_DIRS})
 link_directories(${CORK_LIBRARY_DIRS})
 
-pkg_check_modules(TACONIC REQUIRED taconic)
-include_directories(${TACONIC_INCLUDE_DIRS})
-link_directories(${TACONIC_LIBRARY_DIRS})
-
 #-----------------------------------------------------------------------
 # Set some options
 
