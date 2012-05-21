@@ -14,7 +14,6 @@
 
 /* include all of the parts */
 #include <vrt/atomic.h>
-#include <vrt/error.h>
 #include <vrt/queue.h>
 #include <vrt/value.h>
 #include <vrt/yield.h>

@@ -13,7 +13,6 @@
 #include <libcork/helpers/errors.h>
 
 #include "vrt/atomic.h"
-#include "vrt/error.h"
 #include "vrt/queue.h"
 #include "vrt/yield.h"
 
@@ -638,8 +637,7 @@ vrt_consumer_next(struct vrt_consumer *c, struct vrt_value **value)
                 return VRT_QUEUE_FLUSH;
 
             default:
-                cork_unknown_error();
-                return -1;
+                cork_unreachable();
         }
     } while (true);
 }

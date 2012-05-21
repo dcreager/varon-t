@@ -11,7 +11,6 @@
 #include <unistd.h>
 
 #include <libcork/core.h>
-#include <libcork/helpers/errors.h>
 
 #include "vrt/yield.h"
 
