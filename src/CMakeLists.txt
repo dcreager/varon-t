@@ -21,8 +21,7 @@ add_library(libvrt SHARED ${LIBVRT_SRC})
 set_target_properties(libvrt PROPERTIES
     OUTPUT_NAME vrt
     SOVERSION 0.0.0)
-target_link_libraries(libvrt
-    ${CORK_LIBRARIES} ${TACONIC_LIBRARIES})
+target_link_libraries(libvrt ${CORK_LIBRARIES})
 
 install(TARGETS libvrt
     RUNTIME DESTINATION bin
