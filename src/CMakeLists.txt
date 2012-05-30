@@ -31,6 +31,6 @@ install(TARGETS libvrt
 # Generate the pkg-config file
 
 set(prefix ${CMAKE_INSTALL_PREFIX})
-configure_file(varon-t.pc.in varon-t.pc)
+configure_file(varon-t.pc.in varon-t.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/varon-t.pc
         DESTINATION lib/pkgconfig)

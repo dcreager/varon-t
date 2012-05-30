@@ -12,7 +12,7 @@ To build Varon-T, you need the following libraries installed on your
 system:
 
   * pkg-config
-  * libcork
+  * libcork (https://github.com/redjack/libcork)
   * check (http://check.sourceforge.net)
 
 
