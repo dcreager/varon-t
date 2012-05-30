@@ -26,7 +26,11 @@ link_directories(${CHECK_LIBRARY_DIRS})
 file(GLOB UTIL_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lib/*.c)
 macro(make_test test_name)
     add_executable(${test_name} ${test_name}.c ${UTIL_SOURCES})
-    target_link_libraries(${test_name} ${CHECK_LIBRARIES} libvrt)
+    target_link_libraries(${test_name}
+        ${CMAKE_THREAD_LIBS_INIT}
+        ${CHECK_LIBRARIES}
+        libvrt
+    )
     add_test(NAME ${test_name} COMMAND ${test_name})
 endmacro(make_test)
 
