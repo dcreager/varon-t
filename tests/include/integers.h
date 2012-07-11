@@ -126,4 +126,37 @@ sum_integers(void *ud)
 }
 
 
+/*-----------------------------------------------------------------------
+ * Noop processor
+ */
+
+struct noop_config {
+    struct vrt_consumer  *c;
+    int64_t  *result;
+};
+
+CORK_ATTR_UNUSED
+static void *
+noop_integers(void *ud)
+{
+    int  rc;
+    struct noop_config  *c = ud;
+    struct vrt_value  *vvalue;
+    int32_t  v = 0;
+    while ((rc = vrt_consumer_next(c->c, &vvalue)) != VRT_QUEUE_EOF) {
+        if (rc == 0) {
+            /*
+            struct vrt_value_int  *value =
+                cork_container_of(vvalue, struct vrt_value_int, parent);
+                v = value->value;
+             */
+        }
+    }
+    if (rc == VRT_QUEUE_EOF) {
+        /* On EOF, copy the latest value in to the result location */
+        *c->result = v;
+    }
+    return NULL;
+}
+
 #endif /* VRT_TESTS_INTEGERS */
