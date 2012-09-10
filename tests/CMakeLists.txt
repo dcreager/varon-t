@@ -23,7 +23,11 @@ link_directories(${CHECK_LIBRARY_DIRS})
 #-----------------------------------------------------------------------
 # Build the test cases
 
-file(GLOB UTIL_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lib/*.c)
+set(UTIL_SOURCES
+    lib/integers.c
+    lib/queue.c
+)
+
 macro(make_test test_name)
     add_executable(${test_name} ${test_name}.c ${UTIL_SOURCES})
     target_link_libraries(${test_name}
@@ -34,6 +38,7 @@ macro(make_test test_name)
     add_test(NAME ${test_name} COMMAND ${test_name})
 endmacro(make_test)
 
+make_test(test-perf-dq)
 make_test(test-vrt)
 
 #-----------------------------------------------------------------------
