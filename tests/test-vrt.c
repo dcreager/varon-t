@@ -3,7 +3,7 @@
  * Copyright © 2012, RedJack, LLC.
  * All rights reserved.
  *
- * Please see the LICENSE.txt file in this distribution for license
+ * Please see the COPYING file in this distribution for license
  * details.
  * ----------------------------------------------------------------------
  */
@@ -18,9 +18,7 @@
 
 #include <check.h>
 
-#include "vrt/queue.h"
-#include "vrt/value.h"
-#include "vrt/yield.h"
+#include "vrt.h"
 
 #include "helpers.h"
 #include "integers.h"
