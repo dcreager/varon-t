@@ -1,0 +1,7 @@
+name: varon-t
+build_dependencies:
+  - pkg-config
+  - check
+dependencies:
+  - libcork
+license: BSD
