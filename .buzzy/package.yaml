@@ -3,5 +3,5 @@ build_dependencies:
   - pkg-config
   - check
 dependencies:
-  - libcork
+  - libcork >= 0.10.0
 license: BSD

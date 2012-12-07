@@ -11,3 +11,4 @@ Version: @VERSION@
 URL: http://github.com/redjack/varon-t/
 Libs: -L${libdir} -lvrt
 Cflags: -I${includedir}
+Requires: libcork >= 0.10.0
