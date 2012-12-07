@@ -116,7 +116,7 @@ END_TEST
 Suite *
 test_suite()
 {
-    Suite  *s = suite_create("varton-t");
+    Suite  *s = suite_create("varon-t");
 
     TCase  *tc_vrt = tcase_create("varon-t");
     tcase_add_test(tc_vrt, test_sum_threaded);
