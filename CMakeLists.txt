@@ -34,7 +34,7 @@ string(REGEX REPLACE "-dev.*" "-dev" BASE_VERSION "${VERSION}")
 find_package(PkgConfig)
 find_package(Threads)
 
-pkg_check_modules(CORK REQUIRED libcork)
+pkg_check_modules(CORK REQUIRED libcork>=0.10.0)
 include_directories(${CORK_INCLUDE_DIRS})
 link_directories(${CORK_LIBRARY_DIRS})
 

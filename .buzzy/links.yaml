@@ -1,3 +1,3 @@
 - !git-env
   url: git://github.com/redjack/libcork.git
-  commit: develop
+  commit: master
