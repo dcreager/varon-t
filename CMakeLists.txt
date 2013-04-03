@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------
-# Copyright © 2012, RedJack, LLC.
+# Copyright © 2011-2013, RedJack, LLC.
 # All rights reserved.
 #
 # Please see the COPYING file in this distribution for license
@@ -21,18 +21,42 @@ execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/version.sh
     OUTPUT_VARIABLE VERSION
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 if(VERSION_RESULT)
-    message(FATAL_ERROR "Cannot determine version number")
+    message(FATAL_ERROR
+            "Cannot determine version number: " ${VERSION_RESULT})
 endif(VERSION_RESULT)
 # This causes an annoying extra prompt in ccmake.
 # message("Current version: " ${VERSION})
 
 string(REGEX REPLACE "-dev.*" "-dev" BASE_VERSION "${VERSION}")
 
+find_package(PkgConfig)
+
+#-----------------------------------------------------------------------
+# Check for building on Tilera
+# If the Tilera environment is installed, then $TILERA_ROOT is defined
+# as the path to the active MDE.
+
+if(DEFINED ENV{TILERA_ROOT})
+    set(TILERA TRUE)
+    set(TILERA_ROOT $ENV{TILERA_ROOT})
+    message("-- Configuring for Tilera MDE ${TILERA_ROOT}")
+    set(ENV{PKG_CONFIG_PATH}
+        "${TILERA_ROOT}/tile/usr/lib/pkgconfig:${TILERA_ROOT}/tile/usr/local/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}"
+    )
+    set(CMAKE_SYSTEM_NAME "Tilera")
+    set(CMAKE_SYSTEM_PROCESSOR "tilegx")
+    set(CMAKE_C_COMPILER "${TILERA_ROOT}/bin/tile-gcc")
+    set(CMAKE_LINKER "${TILERA_ROOT}/bin/tile-ld")
+    set(TILERA_MONITOR "${TILERA_ROOT}/bin/tile-monitor")
+    #add_definitions(-std=gnu99)
+    set(CMAKE_FIND_ROOT_PATH "${TILERA_ROOT}/tile")
+    set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY)
+    set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+    set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+endif()
+
 #-----------------------------------------------------------------------
 # Check for prerequisite libraries
-
-find_package(PkgConfig)
-find_package(Threads)
 
 pkg_check_modules(CORK REQUIRED libcork>=0.10.0)
 include_directories(${CORK_INCLUDE_DIRS})
