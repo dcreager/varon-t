@@ -80,8 +80,8 @@ vrt_queue_new(const char *name, struct vrt_value_type *value_type,
     q->values = cork_calloc(value_count, sizeof(struct vrt_value *));
     DEBUG("[%s] Created queue with %u values\n", q->name, value_count);
 
-    cork_array_init(&q->producers);
-    cork_array_init(&q->consumers);
+    cork_pointer_array_init(&q->producers, (cork_free_f) vrt_producer_free);
+    cork_pointer_array_init(&q->consumers, (cork_free_f) vrt_consumer_free);
 
     unsigned int  i;
     for (i = 0; i < value_count; i++) {
@@ -101,20 +101,7 @@ vrt_queue_free(struct vrt_queue *q)
         cork_strfree(q->name);
     }
 
-    for (i = 0; i < cork_array_size(&q->producers); i++) {
-        struct vrt_producer  *p = cork_array_at(&q->producers, i);
-        if (p != NULL) {
-            vrt_producer_free(p);
-        }
-    }
     cork_array_done(&q->producers);
-
-    for (i = 0; i < cork_array_size(&q->consumers); i++) {
-        struct vrt_consumer  *c = cork_array_at(&q->consumers, i);
-        if (c != NULL) {
-            vrt_consumer_free(c);
-        }
-    }
     cork_array_done(&q->consumers);
 
     if (q->values != NULL) {
@@ -270,7 +257,7 @@ static int
 vrt_queue_add_producer(struct vrt_queue *q, struct vrt_producer *p)
 {
     /* Add the producer to the queue's array and assign its index. */
-    rii_check(cork_array_append(&q->producers, p));
+    cork_array_append(&q->producers, p);
     p->queue = q;
     p->index = cork_array_size(&q->producers) - 1;
 
@@ -303,7 +290,7 @@ static int
 vrt_queue_add_consumer(struct vrt_queue *q, struct vrt_consumer *c)
 {
     /* Add the consumer to the queue's array and assign its index. */
-    rii_check(cork_array_append(&q->consumers, c));
+    cork_array_append(&q->consumers, c);
     c->queue = q;
     c->index = cork_array_size(&q->consumers) - 1;
     return 0;
