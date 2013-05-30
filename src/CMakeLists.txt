@@ -50,9 +50,7 @@ set_target_properties(libvrt PROPERTIES
     SOVERSION 0)
 target_link_libraries(libvrt ${CORK_LIBRARIES})
 
-install(TARGETS libvrt
-    RUNTIME DESTINATION bin
-    LIBRARY DESTINATION lib)
+install(TARGETS libvrt DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 #-----------------------------------------------------------------------
 # Generate the pkg-config file
@@ -60,4 +58,4 @@ install(TARGETS libvrt
 set(prefix ${CMAKE_INSTALL_PREFIX})
 configure_file(varon-t.pc.in ${CMAKE_CURRENT_BINARY_DIR}/varon-t.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/varon-t.pc
-        DESTINATION lib/pkgconfig)
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
