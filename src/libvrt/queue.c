@@ -1,12 +1,13 @@
 /* -*- coding: utf-8 -*-
  * ----------------------------------------------------------------------
- * Copyright © 2012, RedJack, LLC.
+ * Copyright © 2012-2013, RedJack, LLC.
  * All rights reserved.
  *
- * Please see the COPYING file in this distribution for license
- * details.
+ * Please see the COPYING file in this distribution for license details.
  * ----------------------------------------------------------------------
  */
+
+#include <assert.h>
 
 #include <libcork/core.h>
 #include <libcork/ds.h>
@@ -144,8 +145,9 @@ static int
 vrt_wait_for_slot(struct vrt_queue *q, struct vrt_producer *p)
 {
     bool  first = true;
-    vrt_value_id  wrapped_id =
-        p->last_claimed_id - vrt_queue_size(q);
+    vrt_value_id  wrapped_id;
+    assert(!cork_array_is_empty(&q->consumers));
+    wrapped_id = p->last_claimed_id - vrt_queue_size(q);
     DEBUG("[%s] %s: Waiting for value %d to be consumed\n",
           q->name, p->name, wrapped_id);
     if (vrt_mod_lt(q->last_consumed_id, wrapped_id)) {
@@ -166,7 +168,6 @@ vrt_wait_for_slot(struct vrt_queue *q, struct vrt_producer *p)
 #endif
         q->last_consumed_id = minimum;
     }
-
     return 0;
 }
 
