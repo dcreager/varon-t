@@ -3,8 +3,7 @@
 # Copyright © 2012, RedJack, LLC.
 # All rights reserved.
 #
-# Please see the COPYING file in this distribution for license
-# details.
+# Please see the COPYING file in this distribution for license details.
 # ----------------------------------------------------------------------
 
 include_directories(../include)
@@ -48,7 +47,10 @@ set_target_properties(libvrt PROPERTIES
     OUTPUT_NAME vrt
     VERSION 0.0.0
     SOVERSION 0)
-target_link_libraries(libvrt ${CORK_LIBRARIES})
+target_link_libraries(libvrt
+    ${CORK_LIBRARIES}
+    ${CLOG_LIBRARIES}
+)
 
 install(TARGETS libvrt DESTINATION ${CMAKE_INSTALL_LIBDIR})
 

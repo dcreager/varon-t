@@ -3,8 +3,7 @@
 # Copyright © 2011-2013, RedJack, LLC.
 # All rights reserved.
 #
-# Please see the COPYING file in this distribution for license
-# details.
+# Please see the COPYING file in this distribution for license details.
 # ----------------------------------------------------------------------
 
 cmake_minimum_required(VERSION 2.6)
@@ -63,6 +62,10 @@ find_package(Threads)
 pkg_check_modules(CORK REQUIRED libcork>=0.10.0)
 include_directories(${CORK_INCLUDE_DIRS})
 link_directories(${CORK_LIBRARY_DIRS})
+
+pkg_check_modules(CLOG REQUIRED clogger>=0.2.0)
+include_directories(${CLOG_INCLUDE_DIRS})
+link_directories(${CLOG_LIBRARY_DIRS})
 
 #-----------------------------------------------------------------------
 # Set some options

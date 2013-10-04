@@ -14,6 +14,7 @@
 #include <sys/resource.h>
 #include <sys/time.h>
 
+#include <clogger.h>
 #include <libcork/core.h>
 
 #include <check.h>
@@ -145,6 +146,7 @@ main(int argc, const char **argv)
     }
 
     vrt_testing_mode();
+    clog_setup_logging();
     srunner_run_all(runner, CK_NORMAL);
     number_failed = srunner_ntests_failed(runner);
     srunner_free(runner);
