@@ -25,6 +25,16 @@
 
 
 /*-----------------------------------------------------------------------
+ * Tests
+ */
+
+/* This function sets some internal state so that we exercise more interesting
+ * behavior during test cases. */
+void
+vrt_testing_mode(void);
+
+
+/*-----------------------------------------------------------------------
  * Queues
  */
 

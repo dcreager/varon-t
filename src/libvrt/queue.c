@@ -31,7 +31,19 @@
 #define MINIMUM_QUEUE_SIZE  16
 #define DEFAULT_QUEUE_SIZE  65536
 #define DEFAULT_BATCH_SIZE  4096
-#define DEFAULT_STARTING_VALUE  (INT_MAX - 2*DEFAULT_BATCH_SIZE)
+
+
+/*-----------------------------------------------------------------------
+ * Tests
+ */
+
+static unsigned int  starting_value = 0;
+
+void
+vrt_testing_mode(void)
+{
+    starting_value = INT_MAX - (2 * DEFAULT_BATCH_SIZE);
+}
 
 
 /*-----------------------------------------------------------------------
@@ -72,7 +84,7 @@ vrt_queue_new(const char *name, struct vrt_value_type *value_type,
         value_count = min_power_of_2(size);
     }
     q->value_mask = value_count - 1;
-    q->last_consumed_id = DEFAULT_STARTING_VALUE;
+    q->last_consumed_id = starting_value;
     q->last_claimed_id.value = q->last_consumed_id;
     q->cursor.value = q->last_consumed_id;
     q->value_type = value_type;
@@ -319,8 +331,8 @@ vrt_producer_new(const char *name, unsigned int batch_size,
         batch_size = maximum_batch_size;
     }
 
-    p->last_produced_id = DEFAULT_STARTING_VALUE;
-    p->last_claimed_id = DEFAULT_STARTING_VALUE;
+    p->last_produced_id = starting_value;
+    p->last_claimed_id = starting_value;
     p->batch_size = batch_size;
     p->yield = NULL;
 #if VRT_QUEUE_STATS
@@ -472,9 +484,9 @@ vrt_consumer_new(const char *name, struct vrt_queue *q)
     cork_array_init(&c->dependencies);
 
     ei_check(vrt_queue_add_consumer(q, c));
-    c->cursor.value = DEFAULT_STARTING_VALUE;
-    c->last_available_id = DEFAULT_STARTING_VALUE;
-    c->current_id = DEFAULT_STARTING_VALUE;
+    c->cursor.value = starting_value;
+    c->last_available_id = starting_value;
+    c->current_id = starting_value;
     c->eof_count = 0;
 #if VRT_QUEUE_STATS
     c->batch_count = 0;
