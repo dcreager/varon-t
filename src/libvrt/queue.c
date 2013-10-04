@@ -155,17 +155,13 @@ vrt_wait_for_slot(struct vrt_queue *q, struct vrt_producer *p)
         while (vrt_mod_lt(minimum, wrapped_id)) {
             clog_trace("<%s> Last consumed value is %d (wait)",
                        p->name, minimum);
-#if VRT_QUEUE_STATS
             p->yield_count++;
-#endif
             rii_check(vrt_yield_strategy_yield
                       (p->yield, first, q->name, p->name));
             first = false;
             minimum = vrt_queue_find_last_consumed_id(q);
         }
-#if VRT_QUEUE_STATS
         p->batch_count++;
-#endif
         q->last_consumed_id = minimum;
         clog_debug("<%s> Last consumed value is %d", p->name, minimum);
     }
@@ -339,10 +335,8 @@ vrt_producer_new(const char *name, unsigned int batch_size,
     p->last_claimed_id = starting_value;
     p->batch_size = batch_size;
     p->yield = NULL;
-#if VRT_QUEUE_STATS
     p->batch_count = 0;
     p->yield_count = 0;
-#endif
     return p;
 
 error:
@@ -462,14 +456,22 @@ vrt_producer_eof(struct vrt_producer *p)
 void
 vrt_report_producer(struct vrt_producer *p)
 {
-#if VRT_QUEUE_STATS
     printf("Producer %s:\n"
-           "  Batches: %zu (%.3lf records/batch)\n"
+           "  Batches: %zu\n"
            "  Yields:  %zu\n",
-           p->name, p->batch_count,
-           ((double) p->queue->last_produced_id.value) / (p->batch_count),
-           p->yield_count);
-#endif
+           p->name, p->batch_count, p->yield_count);
+}
+
+size_t
+vrt_producer_batch_count(const struct vrt_producer *p)
+{
+    return p->batch_count;
+}
+
+size_t
+vrt_producer_yield_count(const struct vrt_producer *p)
+{
+    return p->yield_count;
 }
 
 
@@ -490,10 +492,8 @@ vrt_consumer_new(const char *name, struct vrt_queue *q)
     c->last_available_id = starting_value;
     c->current_id = starting_value;
     c->eof_count = 0;
-#if VRT_QUEUE_STATS
     c->batch_count = 0;
     c->yield_count = 0;
-#endif
     return c;
 
 error:
@@ -558,9 +558,7 @@ vrt_consumer_next_raw(struct vrt_queue *q, struct vrt_consumer *c)
         while (vrt_mod_le(last_available_id, last_consumed_id)) {
             clog_trace("<%s> Last available value is %d (wait)",
                        c->name, last_available_id);
-#if VRT_QUEUE_STATS
             c->yield_count++;
-#endif
             rii_check(vrt_yield_strategy_yield
                       (c->yield, first, q->name, c->name));
             first = false;
@@ -581,9 +579,7 @@ vrt_consumer_next_raw(struct vrt_queue *q, struct vrt_consumer *c)
         while (vrt_mod_le(last_available_id, last_consumed_id)) {
             clog_trace("<%s> Last available value is %d (wait)",
                        c->name, last_available_id);
-#if VRT_QUEUE_STATS
             c->yield_count++;
-#endif
             rii_check(vrt_yield_strategy_yield
                       (c->yield, first, q->name, c->name));
             first = false;
@@ -594,9 +590,7 @@ vrt_consumer_next_raw(struct vrt_queue *q, struct vrt_consumer *c)
                    c->name, last_available_id);
     }
 
-#if VRT_QUEUE_STATS
     c->batch_count++;
-#endif
 
     /* Once we fall through to here, we know that there are additional
      * values that we can process. */
@@ -657,12 +651,20 @@ vrt_consumer_next(struct vrt_consumer *c, struct vrt_value **value)
 void
 vrt_report_consumer(struct vrt_consumer *c)
 {
-#if VRT_QUEUE_STATS
     printf("Consumer %s:\n"
-           "  Batches: %zu (%.3lf records/batch)\n"
+           "  Batches: %zu\n"
            "  Yields:  %zu\n",
-           c->name, c->batch_count,
-           ((double) c->last_produced_id) / (c->batch_count),
-           c->yield_count);
-#endif
+           c->name, c->batch_count, c->yield_count);
+}
+
+size_t
+vrt_consumer_batch_count(const struct vrt_consumer *c)
+{
+    return c->batch_count;
+}
+
+size_t
+vrt_consumer_yield_count(const struct vrt_consumer *c)
+{
+    return c->yield_count;
 }
