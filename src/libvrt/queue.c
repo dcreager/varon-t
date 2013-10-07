@@ -7,6 +7,8 @@
  * ----------------------------------------------------------------------
  */
 
+#include <assert.h>
+
 #include <clogger.h>
 #include <libcork/core.h>
 #include <libcork/ds.h>
@@ -414,8 +416,15 @@ vrt_producer_skip(struct vrt_producer *p)
 int
 vrt_producer_flush(struct vrt_producer *p)
 {
-    /* Claim a value to fill in a FLUSH control message. */
     struct vrt_value  *v;
+
+    if (p->last_produced_id == p->last_claimed_id) {
+        /* We don't have any queue entries that we've claimed but haven't used,
+         * so there's nothing to flush. */
+        return 0;
+    }
+
+    /* Claim a value to fill in a FLUSH control message. */
     rii_check(vrt_producer_claim_raw(p->queue, p));
     clog_trace("<%s> Flush %d", p->name, p->last_produced_id);
     v = vrt_queue_get(p->queue, p->last_produced_id);
