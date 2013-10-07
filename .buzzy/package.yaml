@@ -4,4 +4,5 @@ build_dependencies:
   - check >= 0.9.4
 dependencies:
   - libcork >= 0.10.0
+  - clogger >= 0.2.0
 license: BSD

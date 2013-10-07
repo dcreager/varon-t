@@ -19,9 +19,14 @@
 #include <vrt/yield.h>
 
 
-#ifndef VRT_QUEUE_STATS
-#define VRT_QUEUE_STATS  0
-#endif
+/*-----------------------------------------------------------------------
+ * Tests
+ */
+
+/* This function sets some internal state so that we exercise more interesting
+ * behavior during test cases. */
+void
+vrt_testing_mode(void);
 
 
 /*-----------------------------------------------------------------------
@@ -188,13 +193,11 @@ struct vrt_producer {
     /** A name for the producer */
     const char  *name;
 
-#if VRT_QUEUE_STATS
     /** The number of batches of values that we process */
-    unsigned int  batch_count;
+    size_t  batch_count;
 
     /** The number of times we have to yield while waiting for a value */
-    unsigned int  yield_count;
-#endif
+    size_t  yield_count;
 };
 
 /** Allocate a new producer that will feed the given queue.  The
@@ -235,6 +238,12 @@ vrt_producer_flush(struct vrt_producer *p);
 
 void
 vrt_report_producer(struct vrt_producer *p);
+
+size_t
+vrt_producer_batch_count(const struct vrt_producer *p);
+
+size_t
+vrt_producer_yield_count(const struct vrt_producer *p);
 
 
 /*-----------------------------------------------------------------------
@@ -298,13 +307,11 @@ struct vrt_consumer {
     /** A name for the consumer */
     const char  *name;
 
-#if VRT_QUEUE_STATS
     /** The number of batches of values that we process */
-    unsigned int  batch_count;
+    size_t  batch_count;
 
     /** The number of times we have to yield while waiting for a value */
-    unsigned int  yield_count;
-#endif
+    size_t  yield_count;
 };
 
 /** Allocate a new consumer that will drain the given queue. */
@@ -351,6 +358,12 @@ vrt_consumer_set_cursor(struct vrt_consumer *c, vrt_value_id value)
 
 void
 vrt_report_consumer(struct vrt_consumer *c);
+
+size_t
+vrt_consumer_batch_count(const struct vrt_consumer *c);
+
+size_t
+vrt_consumer_yield_count(const struct vrt_consumer *c);
 
 
 #endif /* VRT_QUEUE_H */
