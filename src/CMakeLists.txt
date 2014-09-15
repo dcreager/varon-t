@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------
-# Copyright © 2012, RedJack, LLC.
+# Copyright © 2012-2014, RedJack, LLC.
 # All rights reserved.
 #
 # Please see the COPYING file in this distribution for license details.
@@ -34,7 +34,7 @@ set(LIBVRT_SRC
 #   6. If any interfaces have been removed or changed since the last public
 #      release, then set `age` to 0.
 #
-# SOVERSION should always equal `current`.
+# SOVERSION should always equal `current-age`.
 #
 # Note that changing `current` means that you are releasing a new
 # backwards-incompatible version of the library.  This has implications on
@@ -45,8 +45,8 @@ set(LIBVRT_SRC
 add_library(libvrt SHARED ${LIBVRT_SRC})
 set_target_properties(libvrt PROPERTIES
     OUTPUT_NAME vrt
-    VERSION 0.0.0
-    SOVERSION 0)
+    VERSION 1.0.0
+    SOVERSION 1)
 target_link_libraries(libvrt
     ${CORK_LIBRARIES}
     ${CLOG_LIBRARIES}
