@@ -1,13 +1,15 @@
 /* -*- coding: utf-8 -*-
  * ----------------------------------------------------------------------
- * Copyright © 2012, RedJack, LLC.
+ * Copyright © 2012-2013, RedJack, LLC.
  * All rights reserved.
  *
- * Please see the COPYING file in this distribution for license
- * details.
+ * Please see the COPYING file in this distribution for license details.
  * ----------------------------------------------------------------------
  */
 
+#include <assert.h>
+
+#include <clogger.h>
 #include <libcork/core.h>
 #include <libcork/ds.h>
 #include <libcork/helpers/errors.h>
@@ -16,22 +18,25 @@
 #include "vrt/queue.h"
 #include "vrt/yield.h"
 
-
-#ifndef VRT_DEBUG_QUEUE
-#define VRT_DEBUG_QUEUE 0
-#endif
-#if VRT_DEBUG_QUEUE
-#include <stdio.h>
-#define DEBUG(...) fprintf(stderr, __VA_ARGS__)
-#else
-#define DEBUG(...) /* do nothing */
-#endif
+#define CLOG_CHANNEL  "vrt"
 
 
 #define MINIMUM_QUEUE_SIZE  16
 #define DEFAULT_QUEUE_SIZE  65536
 #define DEFAULT_BATCH_SIZE  4096
-#define DEFAULT_STARTING_VALUE  (INT_MAX - 2*DEFAULT_BATCH_SIZE)
+
+
+/*-----------------------------------------------------------------------
+ * Tests
+ */
+
+static unsigned int  starting_value = 0;
+
+void
+vrt_testing_mode(void)
+{
+    starting_value = INT_MAX - (2 * DEFAULT_BATCH_SIZE);
+}
 
 
 /*-----------------------------------------------------------------------
@@ -72,16 +77,16 @@ vrt_queue_new(const char *name, struct vrt_value_type *value_type,
         value_count = min_power_of_2(size);
     }
     q->value_mask = value_count - 1;
-    q->last_consumed_id = DEFAULT_STARTING_VALUE;
+    q->last_consumed_id = starting_value;
     q->last_claimed_id.value = q->last_consumed_id;
     q->cursor.value = q->last_consumed_id;
     q->value_type = value_type;
 
     q->values = cork_calloc(value_count, sizeof(struct vrt_value *));
-    DEBUG("[%s] Created queue with %u values\n", q->name, value_count);
+    clog_debug("[%s] Create queue with %u entries", q->name, value_count);
 
-    cork_array_init(&q->producers);
-    cork_array_init(&q->consumers);
+    cork_pointer_array_init(&q->producers, (cork_free_f) vrt_producer_free);
+    cork_pointer_array_init(&q->consumers, (cork_free_f) vrt_consumer_free);
 
     unsigned int  i;
     for (i = 0; i < value_count; i++) {
@@ -101,20 +106,7 @@ vrt_queue_free(struct vrt_queue *q)
         cork_strfree(q->name);
     }
 
-    for (i = 0; i < cork_array_size(&q->producers); i++) {
-        struct vrt_producer  *p = cork_array_at(&q->producers, i);
-        if (p != NULL) {
-            vrt_producer_free(p);
-        }
-    }
     cork_array_done(&q->producers);
-
-    for (i = 0; i < cork_array_size(&q->consumers); i++) {
-        struct vrt_consumer  *c = cork_array_at(&q->consumers, i);
-        if (c != NULL) {
-            vrt_consumer_free(c);
-        }
-    }
     cork_array_done(&q->consumers);
 
     if (q->values != NULL) {
@@ -157,27 +149,23 @@ static int
 vrt_wait_for_slot(struct vrt_queue *q, struct vrt_producer *p)
 {
     bool  first = true;
-    vrt_value_id  wrapped_id =
-        p->last_claimed_id - vrt_queue_size(q);
-    DEBUG("[%s] %s: Waiting for value %d to be consumed\n",
-          q->name, p->name, wrapped_id);
+    vrt_value_id  wrapped_id = p->last_claimed_id - vrt_queue_size(q);
     if (vrt_mod_lt(q->last_consumed_id, wrapped_id)) {
+        clog_debug("<%s> Wait for value %d to be consumed",
+                   p->name, wrapped_id);
         vrt_value_id  minimum = vrt_queue_find_last_consumed_id(q);
         while (vrt_mod_lt(minimum, wrapped_id)) {
-            DEBUG("[%s] %s: Last consumed value is %d\n",
-                  q->name, p->name, minimum);
-#if VRT_QUEUE_STATS
+            clog_trace("<%s> Last consumed value is %d (wait)",
+                       p->name, minimum);
             p->yield_count++;
-#endif
             rii_check(vrt_yield_strategy_yield
                       (p->yield, first, q->name, p->name));
             first = false;
             minimum = vrt_queue_find_last_consumed_id(q);
         }
-#if VRT_QUEUE_STATS
         p->batch_count++;
-#endif
         q->last_consumed_id = minimum;
+        clog_debug("<%s> Last consumed value is %d", p->name, minimum);
     }
 
     return 0;
@@ -191,12 +179,12 @@ vrt_claim_single_threaded(struct vrt_queue *q, struct vrt_producer *p)
      * batch of values in sequence. */
     p->last_claimed_id += p->batch_size;
     if (p->batch_size == 1) {
-        DEBUG("[%s] %s: Claiming value %d\n",
-              q->name, p->name, p->last_claimed_id);
+        clog_trace("<%s> Claim value %d (single-threaded)",
+                   p->name, p->last_claimed_id);
     } else {
-        DEBUG("[%s] %s: Claiming values %d-%d\n",
-              q->name, p->name,
-              p->last_claimed_id - p->batch_size + 1, p->last_claimed_id);
+        clog_trace("<%s> Claim values %d-%d (single-threaded)",
+                   p->name, p->last_claimed_id - p->batch_size + 1,
+                   p->last_claimed_id);
     }
 
     /* But we do have to wait until the slots for these new values are
@@ -213,12 +201,11 @@ vrt_claim_multi_threaded(struct vrt_queue *q, struct vrt_producer *p)
         vrt_padded_int_atomic_add(&q->last_claimed_id, p->batch_size);
     p->last_produced_id = p->last_claimed_id - p->batch_size;
     if (p->batch_size == 1) {
-        DEBUG("[%s] %s: xClaiming value %d\n",
-              q->name, p->name, p->last_claimed_id);
+        clog_trace("<%s> Claim value %d (multi-threaded)",
+                   p->name, p->last_claimed_id);
     } else {
-        DEBUG("[%s] %s: xClaiming values %d-%d\n",
-              q->name, p->name,
-              p->last_produced_id + 1, p->last_claimed_id);
+        clog_trace("<%s> Claim values %d-%d (multi-threaded)",
+                   p->name, p->last_produced_id + 1, p->last_claimed_id);
     }
 
     /* Then wait until the slots for these new values are free. */
@@ -233,8 +220,8 @@ vrt_publish_single_threaded(struct vrt_queue *q, struct vrt_producer *p,
      * cursor.  We don't have to wait for anything, because the claim
      * function will have already ensured that this slot was free to
      * fill in and publish. */
-    DEBUG("[%s] %s: Publishing value %d\n",
-          q->name, p->name, last_published_id);
+    clog_debug("<%s> Signal publication of value %d (single-threaded)",
+               p->name, last_published_id);
     vrt_queue_set_cursor(q, last_published_id);
     return 0;
 }
@@ -243,25 +230,31 @@ static int
 vrt_publish_multi_threaded(struct vrt_queue *q, struct vrt_producer *p,
                            vrt_value_id last_published_id)
 {
+    bool  first = true;
+    vrt_value_id  expected_cursor;
+    vrt_value_id  current_cursor;
+
     /* If there are multiple publisherthen we have to wait until all
      * of the values before the chunk that we claimed have been
      * published.  (If we don't, there will be a hole in the sequence of
      * published records.) */
-    vrt_value_id  expected_cursor = last_published_id - p->batch_size;
-    DEBUG("[%s] %s: Waiting for value %d to be published\n",
-          q->name, p->name, expected_cursor);
-    vrt_value_id  current_cursor = vrt_queue_get_cursor(q);
-    bool  first = true;
+    expected_cursor = last_published_id - p->batch_size;
+    current_cursor = vrt_queue_get_cursor(q);
+    clog_debug("<%s> Wait for value %d to be published",
+               p->name, expected_cursor);
 
     while (vrt_mod_lt(current_cursor, expected_cursor)) {
+        clog_trace("<%s> Last published value is %d (wait)",
+                   p->name, current_cursor);
         rii_check(vrt_yield_strategy_yield
                   (p->yield, first, q->name, p->name));
         first = false;
         current_cursor = vrt_queue_get_cursor(q);
     }
 
-    DEBUG("[%s] %s: Publishing value %d\n",
-          q->name, p->name, last_published_id);
+    clog_debug("<%s> Last published value is %d", p->name, current_cursor);
+    clog_debug("<%s> Signal publication of value %d (multi-threaded)",
+               p->name, last_published_id);
     vrt_queue_set_cursor(q, last_published_id);
     return 0;
 }
@@ -269,8 +262,10 @@ vrt_publish_multi_threaded(struct vrt_queue *q, struct vrt_producer *p,
 static int
 vrt_queue_add_producer(struct vrt_queue *q, struct vrt_producer *p)
 {
+    clog_debug("[%s] Add producer %s", q->name, p->name);
+
     /* Add the producer to the queue's array and assign its index. */
-    rii_check(cork_array_append(&q->producers, p));
+    cork_array_append(&q->producers, p);
     p->queue = q;
     p->index = cork_array_size(&q->producers) - 1;
 
@@ -302,8 +297,10 @@ vrt_queue_add_producer(struct vrt_queue *q, struct vrt_producer *p)
 static int
 vrt_queue_add_consumer(struct vrt_queue *q, struct vrt_consumer *c)
 {
+    clog_debug("[%s] Add consumer %s", q->name, c->name);
+
     /* Add the consumer to the queue's array and assign its index. */
-    rii_check(cork_array_append(&q->consumers, c));
+    cork_array_append(&q->consumers, c);
     c->queue = q;
     c->index = cork_array_size(&q->consumers) - 1;
     return 0;
@@ -318,7 +315,10 @@ struct vrt_producer *
 vrt_producer_new(const char *name, unsigned int batch_size,
                  struct vrt_queue *q)
 {
-    struct vrt_producer  *p = cork_new(struct vrt_producer);
+    struct vrt_producer  *p;
+    unsigned int  maximum_batch_size;
+
+    p = cork_new(struct vrt_producer);
     memset(p, 0, sizeof(struct vrt_producer));
 
     p->name = cork_strdup(name);
@@ -327,19 +327,18 @@ vrt_producer_new(const char *name, unsigned int batch_size,
     if (batch_size == 0) {
         batch_size = DEFAULT_BATCH_SIZE;
     }
-    unsigned int  maximum_batch_size = vrt_queue_size(q) / 4;
+    maximum_batch_size = vrt_queue_size(q) / 4;
     if (batch_size > maximum_batch_size) {
         batch_size = maximum_batch_size;
     }
+    clog_trace("<%s> Batch size is %u", name, batch_size);
 
-    p->last_produced_id = DEFAULT_STARTING_VALUE;
-    p->last_claimed_id = DEFAULT_STARTING_VALUE;
+    p->last_produced_id = starting_value;
+    p->last_claimed_id = starting_value;
     p->batch_size = batch_size;
     p->yield = NULL;
-#if VRT_QUEUE_STATS
     p->batch_count = 0;
     p->yield_count = 0;
-#endif
     return p;
 
 error:
@@ -375,8 +374,8 @@ vrt_producer_claim_raw(struct vrt_queue *q, struct vrt_producer *p)
         rii_check(p->claim(q, p));
     }
     p->last_produced_id++;
-    DEBUG("[%s] %s: Returning value %d (%d)\n",
-          q->name, p->name, p->last_produced_id, p->last_claimed_id);
+    clog_trace("<%s> Claimed value %d (%d is available)\n",
+               p->name, p->last_produced_id, p->last_claimed_id);
     return 0;
 }
 
@@ -395,13 +394,11 @@ vrt_producer_claim(struct vrt_producer *p, struct vrt_value **value)
 int
 vrt_producer_publish(struct vrt_producer *p)
 {
-#if 0
-    DEBUG("[%s] %s: Pre-publishing value %d\n",
-          p->queue->name, p->name, p->last_produced_id);
-#endif
     if (p->last_produced_id == p->last_claimed_id) {
         return p->publish(p->queue, p, p->last_claimed_id);
     } else {
+        clog_trace("<%s> Wait to publish %d until end of batch (at %d)",
+                   p->name, p->last_produced_id, p->last_claimed_id);
         return 0;
     }
 }
@@ -410,6 +407,7 @@ int
 vrt_producer_skip(struct vrt_producer *p)
 {
     struct vrt_value  *v;
+    clog_trace("<%s> Skip %d", p->name, p->last_produced_id);
     v = vrt_queue_get(p->queue, p->last_produced_id);
     v->special = VRT_VALUE_HOLE;
     return vrt_producer_publish(p);
@@ -418,9 +416,17 @@ vrt_producer_skip(struct vrt_producer *p)
 int
 vrt_producer_flush(struct vrt_producer *p)
 {
-    /* Claim a value to fill in a FLUSH control message. */
     struct vrt_value  *v;
+
+    if (p->last_produced_id == p->last_claimed_id) {
+        /* We don't have any queue entries that we've claimed but haven't used,
+         * so there's nothing to flush. */
+        return 0;
+    }
+
+    /* Claim a value to fill in a FLUSH control message. */
     rii_check(vrt_producer_claim_raw(p->queue, p));
+    clog_trace("<%s> Flush %d", p->name, p->last_produced_id);
     v = vrt_queue_get(p->queue, p->last_produced_id);
     v->special = VRT_VALUE_FLUSH;
 
@@ -428,9 +434,8 @@ vrt_producer_flush(struct vrt_producer *p)
      * remainder with holes. */
     if (vrt_mod_lt(p->last_produced_id, p->last_claimed_id)) {
         vrt_value_id  i;
-        DEBUG("[%s] %s: Filling in holes for values %d-%d\n",
-              p->queue->name, p->name,
-              p->last_produced_id + 1, p->last_claimed_id);
+        clog_trace("<%s> Holes %d-%d",
+                   p->name, p->last_produced_id + 1, p->last_claimed_id);
         for (i = p->last_produced_id + 1;
              vrt_mod_le(i, p->last_claimed_id); i++) {
             struct vrt_value  *v = vrt_queue_get(p->queue, i);
@@ -449,8 +454,7 @@ vrt_producer_eof(struct vrt_producer *p)
 {
     struct vrt_value  *v;
     rii_check(vrt_producer_claim_raw(p->queue, p));
-    DEBUG("[%s] %s: Signaling EOF at value %d\n",
-          p->queue->name, p->name, p->last_produced_id);
+    clog_debug("<%s> EOF %d", p->name, p->last_produced_id);
     v = vrt_queue_get(p->queue, p->last_produced_id);
     v->id = p->last_produced_id;
     v->special = VRT_VALUE_EOF;
@@ -461,14 +465,22 @@ vrt_producer_eof(struct vrt_producer *p)
 void
 vrt_report_producer(struct vrt_producer *p)
 {
-#if VRT_QUEUE_STATS
     printf("Producer %s:\n"
-           "  Batches: %zu (%.3lf records/batch)\n"
+           "  Batches: %zu\n"
            "  Yields:  %zu\n",
-           p->name, p->batch_count,
-           ((double) p->queue->last_produced_id.value) / (p->batch_count),
-           p->yield_count);
-#endif
+           p->name, p->batch_count, p->yield_count);
+}
+
+size_t
+vrt_producer_batch_count(const struct vrt_producer *p)
+{
+    return p->batch_count;
+}
+
+size_t
+vrt_producer_yield_count(const struct vrt_producer *p)
+{
+    return p->yield_count;
 }
 
 
@@ -485,14 +497,12 @@ vrt_consumer_new(const char *name, struct vrt_queue *q)
     cork_array_init(&c->dependencies);
 
     ei_check(vrt_queue_add_consumer(q, c));
-    c->cursor.value = DEFAULT_STARTING_VALUE;
-    c->last_available_id = DEFAULT_STARTING_VALUE;
-    c->current_id = DEFAULT_STARTING_VALUE;
+    c->cursor.value = starting_value;
+    c->last_available_id = starting_value;
+    c->current_id = starting_value;
     c->eof_count = 0;
-#if VRT_QUEUE_STATS
     c->batch_count = 0;
     c->yield_count = 0;
-#endif
     return c;
 
 error:
@@ -524,7 +534,7 @@ vrt_consumer_free(struct vrt_consumer *c)
     (vrt_minimum_cursor(&(c)->dependencies))
 
 /* Retrieves the next value from the consumer's queue.  When this
- * returnc->current_id will be the ID of the next value.  You can
+ * returns c->current_id will be the ID of the next value.  You can
  * retrieve the value using vrt_queue_get. */
 static int
 vrt_consumer_next_raw(struct vrt_queue *q, struct vrt_consumer *c)
@@ -535,60 +545,65 @@ vrt_consumer_next_raw(struct vrt_queue *q, struct vrt_consumer *c)
     /* If we know there are values available that we haven't yet
      * consumed, go ahead and return one. */
     if (vrt_mod_le(c->current_id, c->last_available_id)) {
+        clog_trace("<%s> Next value is %d (already available)",
+                   c->name, c->current_id);
         return 0;
     }
 
     /* We've run out of values that we know can been processed.  Notify
      * the world how much we've processed so far. */
+    clog_debug("<%s> Signal consumption of %d", c->name, last_consumed_id);
     vrt_consumer_set_cursor(c, last_consumed_id);
 
     /* Check to see if there are any more values that we can process. */
     if (cork_array_is_empty(&c->dependencies)) {
-        DEBUG("[%s] %s: Waiting for value %d from queue\n",
-              q->name, c->name, c->current_id);
-        /* If we don't have any dependenciewe check the queue itself to
-         * see how many values have been published. */
         bool  first = true;
-        vrt_value_id  last_available_id =
-            vrt_queue_get_cursor(q);
+        vrt_value_id  last_available_id;
+        clog_debug("<%s> Wait for value %d", c->name, c->current_id);
+
+        /* If we don't have any dependencies check the queue itself to see how
+         * many values have been published. */
+        last_available_id = vrt_queue_get_cursor(q);
         while (vrt_mod_le(last_available_id, last_consumed_id)) {
-#if VRT_QUEUE_STATS
+            clog_trace("<%s> Last available value is %d (wait)",
+                       c->name, last_available_id);
             c->yield_count++;
-#endif
             rii_check(vrt_yield_strategy_yield
                       (c->yield, first, q->name, c->name));
             first = false;
             last_available_id = vrt_queue_get_cursor(q);
         }
         c->last_available_id = last_available_id;
+        clog_debug("<%s> Last available value is %d",
+                   c->name, last_available_id);
     } else {
-        DEBUG("[%s] %s: Waiting for value %d from dependencies\n",
-              q->name, c->name, c->current_id);
-        /* If there are dependenciewe can only process what they've
-         * *all* finished processing. */
         bool  first = true;
-        vrt_value_id  last_available_id =
-            vrt_consumer_find_last_dependent_id(c);
+        vrt_value_id  last_available_id;
+        clog_debug("<%s> Wait for value %d from dependencies",
+                   c->name, c->current_id);
+
+        /* If there are dependencies we can only process what they've *all*
+         * finished processing. */
+        last_available_id = vrt_consumer_find_last_dependent_id(c);
         while (vrt_mod_le(last_available_id, last_consumed_id)) {
-#if VRT_QUEUE_STATS
+            clog_trace("<%s> Last available value is %d (wait)",
+                       c->name, last_available_id);
             c->yield_count++;
-#endif
             rii_check(vrt_yield_strategy_yield
                       (c->yield, first, q->name, c->name));
             first = false;
             last_available_id = vrt_consumer_find_last_dependent_id(c);
         }
         c->last_available_id = last_available_id;
+        clog_debug("<%s> Last available value is %d",
+                   c->name, last_available_id);
     }
 
-#if VRT_QUEUE_STATS
     c->batch_count++;
-#endif
 
     /* Once we fall through to here, we know that there are additional
      * values that we can process. */
-    DEBUG("[%s] %s: Value %d ready for processing\n",
-          q->name, c->name, c->last_available_id);
+    clog_trace("<%s> Next value is %d", c->name, c->current_id);
     return 0;
 }
 
@@ -603,22 +618,22 @@ vrt_consumer_next(struct vrt_consumer *c, struct vrt_value **value)
 
         switch (v->special) {
             case VRT_VALUE_NONE:
-                DEBUG("[%s] %s: Processing value %d\n",
-                      c->queue->name, c->name, c->current_id);
                 *value = v;
                 return 0;
 
             case VRT_VALUE_EOF:
                 producer_count = cork_array_size(&c->queue->producers);
                 c->eof_count++;
-                DEBUG("[%s] %s: Detected EOF (%u of %u) at value %d\n",
-                      c->queue->name, c->name,
-                      c->eof_count, producer_count, c->current_id);
+                clog_debug("<%s> Detected EOF (%u of %u) at value %d",
+                           c->name, c->eof_count, producer_count,
+                           c->current_id);
 
                 if (c->eof_count == producer_count) {
                     /* We've run out of values that we know can been
                      * processed.  Notify the world how much we've
                      * processed so far. */
+                    clog_debug("<%s> Signal consumption of %d",
+                               c->name, c->current_id);
                     vrt_consumer_set_cursor(c, c->current_id);
                     return VRT_QUEUE_EOF;
                 } else {
@@ -645,12 +660,20 @@ vrt_consumer_next(struct vrt_consumer *c, struct vrt_value **value)
 void
 vrt_report_consumer(struct vrt_consumer *c)
 {
-#if VRT_QUEUE_STATS
     printf("Consumer %s:\n"
-           "  Batches: %zu (%.3lf records/batch)\n"
+           "  Batches: %zu\n"
            "  Yields:  %zu\n",
-           c->name, c->batch_count,
-           ((double) c->last_produced_id) / (c->batch_count),
-           c->yield_count);
-#endif
+           c->name, c->batch_count, c->yield_count);
+}
+
+size_t
+vrt_consumer_batch_count(const struct vrt_consumer *c)
+{
+    return c->batch_count;
+}
+
+size_t
+vrt_consumer_yield_count(const struct vrt_consumer *c)
+{
+    return c->yield_count;
 }

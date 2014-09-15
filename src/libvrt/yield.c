@@ -36,11 +36,14 @@
 #define PAUSE()  /* do nothing */
 #endif
 
+#if (defined(__unix__) || defined(unix)) && !defined(USG)
+#include <sys/param.h>
+#endif
 
 #if defined(__APPLE__)
 #include <pthread.h>
 #define THREAD_YIELD   pthread_yield_np
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(BSD)
 #include <sched.h>
 #define THREAD_YIELD   sched_yield
 #else

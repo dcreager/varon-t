@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------
-# Copyright © 2012, RedJack, LLC.
+# Copyright © 2011-2014, RedJack, LLC.
 # All rights reserved.
 #
-# Please see the COPYING file in this distribution for license
-# details.
+# Please see the COPYING file in this distribution for license details.
 # ----------------------------------------------------------------------
 
 include_directories(../include)
@@ -35,7 +34,7 @@ macro(make_test test_name)
         ${CHECK_LIBRARIES}
         libvrt
     )
-    add_test(NAME ${test_name} COMMAND ${test_name})
+    add_test(${test_name} ${test_name})
 endmacro(make_test)
 
 make_test(test-perf-dq)
@@ -44,24 +43,26 @@ make_test(test-vrt)
 #-----------------------------------------------------------------------
 # Command-line tests
 
-# This will automatically find any test cases in tests/ that should be
-# run using the run-script helper script.  This lets you pass in
-# arbitary command-line options and stdin to a compiled executable, and
-# verify its stdout and stderr.  The expectation is that your
-# directories will be named tests/${category}/${test_name}
+if(TILERA)
+    configure_file(tile-test ${CMAKE_BINARY_DIR}/tile-test COPYONLY)
+endif(TILERA)
 
-configure_file(run-test ${CMAKE_BINARY_DIR}/run-test COPYONLY)
-configure_file(train ${CMAKE_BINARY_DIR}/train COPYONLY)
+find_package(PythonInterp)
 
-file(GLOB_RECURSE OUTPUT_TESTS command)
-foreach(OUTPUT_TEST ${OUTPUT_TESTS})
-    get_filename_component(test_dir ${OUTPUT_TEST} PATH)
-    get_filename_component(test_suffix ${test_dir} NAME)
-    get_filename_component(test_parent_dir ${test_dir} PATH)
-    get_filename_component(test_prefix ${test_parent_dir} NAME)
-    set(test_name "${test_prefix}:${test_suffix}")
-
-    add_test(NAME ${test_name}
-             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-             COMMAND ${CMAKE_BINARY_DIR}/run-test ${test_dir})
-endforeach(OUTPUT_TEST ${OUTPUT_TESTS})
+if (PYTHON_EXECUTABLE)
+    configure_file(ccram ${CMAKE_BINARY_DIR}/ccram COPYONLY)
+    file(GLOB_RECURSE TESTS "${CMAKE_CURRENT_SOURCE_DIR}/*.t")
+    foreach(TEST ${TESTS})
+        get_filename_component(TEST_NAME "${TEST}" NAME_WE)
+        add_test(
+            ${TEST_NAME}
+            ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR}
+            ${CMAKE_BINARY_DIR}/ccram
+                --python ${PYTHON_EXECUTABLE}
+                --root ${CMAKE_SOURCE_DIR}
+                --tests ${TEST}
+        )
+    endforeach(TEST)
+else (PYTHON_EXECUTABLE)
+    message(WARNING "Unable to find Python; skipping cram tests.")
+endif (PYTHON_EXECUTABLE)
