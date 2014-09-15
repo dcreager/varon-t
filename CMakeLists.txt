@@ -94,7 +94,7 @@ endif(CMAKE_C_COMPILER_ID STREQUAL "GNU")
 #-----------------------------------------------------------------------
 # Include our subdirectories
 
-add_subdirectory(docs)
+add_subdirectory(docs/old)
 add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(tests)
