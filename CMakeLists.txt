@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------
-# Copyright © 2011-2013, RedJack, LLC.
+# Copyright © 2011-2014, RedJack, LLC.
 # All rights reserved.
 #
 # Please see the COPYING file in this distribution for license details.
@@ -8,6 +8,7 @@
 
 cmake_minimum_required(VERSION 2.6)
 set(PROJECT_NAME varon-t)
+set(RELEASE_DATE 2012-12-07)
 project(${PROJECT_NAME})
 enable_testing()
 
@@ -88,6 +89,8 @@ set(CMAKE_INSTALL_LIBDIR lib CACHE STRING
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
     add_definitions(-Wall -Werror)
 elseif(CMAKE_C_COMPILER_ID STREQUAL "Clang")
+    add_definitions(-Wall -Werror)
+elseif(CMAKE_C_COMPILER_ID STREQUAL "Intel")
     add_definitions(-Wall -Werror)
 endif(CMAKE_C_COMPILER_ID STREQUAL "GNU")
 
