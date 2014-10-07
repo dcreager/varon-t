@@ -209,6 +209,8 @@ main(int argc, const char * argv[])
     uint32_t  batch_size = 0;
 #define MAX_BATCH_SIZE  1024
 
+    setup_allocator();
+
     /* 1-1 Unicast test (batched) */
     for (batch_size = 64; batch_size <= MAX_BATCH_SIZE; batch_size <<= 1) {
 

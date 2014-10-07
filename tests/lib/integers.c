@@ -1,10 +1,9 @@
 /* -*- coding: utf-8 -*-
  * ----------------------------------------------------------------------
- * Copyright © 2011, RedJack, LLC.
+ * Copyright © 2011-2014, RedJack, LLC.
  * All rights reserved.
  *
- * Please see the COPYING file in this distribution for license
- * details.
+ * Please see the COPYING file in this distribution for license details.
  * ----------------------------------------------------------------------
  */
 
@@ -26,7 +25,7 @@ vrt_value_int_free(struct vrt_value_type *type, struct vrt_value *vself)
 {
     struct vrt_value_int  *self =
         cork_container_of(vself, struct vrt_value_int, parent);
-    free(self);
+    cork_delete(struct vrt_value_int, self);
 }
 
 static struct vrt_value_type  _vrt_value_type_int = {

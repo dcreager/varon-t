@@ -1,10 +1,9 @@
 /* -*- coding: utf-8 -*-
  * ----------------------------------------------------------------------
- * Copyright © 2012, RedJack, LLC.
+ * Copyright © 2012-2014, RedJack, LLC.
  * All rights reserved.
  *
- * Please see the COPYING file in this distribution for license
- * details.
+ * Please see the COPYING file in this distribution for license details.
  * ----------------------------------------------------------------------
  */
 
@@ -65,7 +64,7 @@ vrt_thread_yield_free(struct vrt_yield_strategy *vys)
 {
     struct vrt_thread_yield_strategy  *ys =
         cork_container_of(vys, struct vrt_thread_yield_strategy, parent);
-    free(ys);
+    cork_delete(struct vrt_thread_yield_strategy, ys);
 }
 
 static int
@@ -147,7 +146,7 @@ vrt_hybrid_yield_free(struct vrt_yield_strategy *vys)
 {
     struct vrt_hybrid_yield_strategy  *ys =
         cork_container_of(vys, struct vrt_hybrid_yield_strategy, parent);
-    free(ys);
+    cork_delete(struct vrt_hybrid_yield_strategy, ys);
 }
 
 static int
