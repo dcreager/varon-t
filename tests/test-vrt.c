@@ -138,6 +138,8 @@ main(int argc, const char **argv)
     Suite  *suite = test_suite();
     SRunner  *runner = srunner_create(suite);
 
+    setup_allocator();
+
     if (argc > 1) {
         if (sscanf(argv[1], "%" PRId64, &GENERATE_COUNT) != 1) {
             fprintf(stderr, "Invalid record count: \"%s\"\n", argv[1]);
