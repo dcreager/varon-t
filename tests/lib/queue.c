@@ -1,10 +1,9 @@
 /* -*- coding: utf-8 -*-
  * ----------------------------------------------------------------------
- * Copyright © 2011-2012, RedJack, LLC.
+ * Copyright © 2011-2014, RedJack, LLC.
  * All rights reserved.
  *
- * Please see the COPYING file in this distribution for license
- * details.
+ * Please see the COPYING file in this distribution for license details.
  * ----------------------------------------------------------------------
  */
 
@@ -20,9 +19,8 @@
 #include "queue.h"
 
 int
-vrt_test_queue_threaded(struct vrt_queue *q,
-                            struct vrt_queue_client *clients,
-                            vrt_clock *elapsed)
+vrt_test_queue_threaded(struct vrt_queue *q, struct vrt_queue_client *clients,
+                        vrt_clock *elapsed)
 {
     vrt_clock  start_time;
     vrt_clock  end_time;
@@ -57,7 +55,7 @@ vrt_test_queue_threaded(struct vrt_queue *q,
         pthread_join(thread_ids[i], NULL);
     }
 
-    free(thread_ids);
+    cork_cfree(thread_ids, client_count, sizeof(pthread_t));
     vrt_get_clock(&end_time);
 
     *elapsed = (end_time - start_time);
@@ -102,7 +100,7 @@ vrt_test_queue_threaded_spin(struct vrt_queue *q,
         pthread_join(thread_ids[i], NULL);
     }
 
-    free(thread_ids);
+    cork_cfree(thread_ids, client_count, sizeof(pthread_t));
     vrt_get_clock(&end_time);
 
     *elapsed = (end_time - start_time);
@@ -147,7 +145,7 @@ vrt_test_queue_threaded_hybrid(struct vrt_queue *q,
         pthread_join(thread_ids[i], NULL);
     }
 
-    free(thread_ids);
+    cork_cfree(thread_ids, client_count, sizeof(pthread_t));
     vrt_get_clock(&end_time);
 
     *elapsed = (end_time - start_time);

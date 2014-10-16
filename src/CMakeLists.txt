@@ -45,7 +45,7 @@ set(LIBVRT_SRC
 add_library(libvrt SHARED ${LIBVRT_SRC})
 set_target_properties(libvrt PROPERTIES
     OUTPUT_NAME vrt
-    VERSION 1.0.0
+    VERSION 1.1.0
     SOVERSION 1)
 target_link_libraries(libvrt
     ${CORK_LIBRARIES}

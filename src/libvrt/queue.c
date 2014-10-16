@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * ----------------------------------------------------------------------
- * Copyright © 2012-2013, RedJack, LLC.
+ * Copyright © 2012-2014, RedJack, LLC.
  * All rights reserved.
  *
  * Please see the COPYING file in this distribution for license details.
@@ -101,6 +101,7 @@ void
 vrt_queue_free(struct vrt_queue *q)
 {
     unsigned int  i;
+    unsigned int  value_count = q->value_mask + 1;
 
     if (q->name != NULL) {
         cork_strfree(q->name);
@@ -110,16 +111,16 @@ vrt_queue_free(struct vrt_queue *q)
     cork_array_done(&q->consumers);
 
     if (q->values != NULL) {
-        for (i = 0; i <= q->value_mask; i++) {
+        for (i = 0; i < value_count; i++) {
             if (q->values[i] != NULL) {
                 vrt_value_free(q->value_type, q->values[i]);
             }
         }
 
-        free(q->values);
+        cork_cfree(q->values, value_count, sizeof(struct vrt_value *));
     }
 
-    free(q);
+    cork_delete(struct vrt_queue, q);
 }
 
 static vrt_value_id
@@ -346,7 +347,7 @@ error:
         cork_strfree(p->name);
     }
 
-    free(p);
+    cork_delete(struct vrt_producer, p);
     return NULL;
 }
 
@@ -361,7 +362,7 @@ vrt_producer_free(struct vrt_producer *p)
         vrt_yield_strategy_free(p->yield);
     }
 
-    free(p);
+    cork_delete(struct vrt_producer, p);
 }
 
 /* Claims the next ID that this producer can fill in.  The new value's
@@ -511,7 +512,7 @@ error:
     }
 
     cork_array_done(&c->dependencies);
-    free(c);
+    cork_delete(struct vrt_consumer, c);
     return NULL;
 }
 
@@ -527,7 +528,7 @@ vrt_consumer_free(struct vrt_consumer *c)
     }
 
     cork_array_done(&c->dependencies);
-    free(c);
+    cork_delete(struct vrt_consumer, c);
 }
 
 #define vrt_consumer_find_last_dependent_id(c) \
