@@ -14,6 +14,7 @@ To build Varon-T, you need the following libraries installed on your system:
   * pkg-config
   * [libcork](https://github.com/redjack/libcork)
   * [check](http://check.sourceforge.net)
+  * [clogger](https://github.com/redjack/clogger)
 
 If you want to build the documentation, you also need:
 
