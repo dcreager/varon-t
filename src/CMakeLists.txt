@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------
-# Copyright © 2012-2014, RedJack, LLC.
+# Copyright © 2012-2015, RedJack, LLC.
 # All rights reserved.
 #
 # Please see the COPYING file in this distribution for license details.
@@ -50,6 +50,7 @@ set_target_properties(libvrt PROPERTIES
 target_link_libraries(libvrt
     ${CORK_LIBRARIES}
     ${CLOG_LIBRARIES}
+    ${BOWSPRIT_LIBRARIES}
 )
 
 install(TARGETS libvrt DESTINATION ${CMAKE_INSTALL_LIBDIR})
