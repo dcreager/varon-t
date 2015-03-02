@@ -68,6 +68,10 @@ pkg_check_modules(CLOG REQUIRED clogger>=0.2.0)
 include_directories(${CLOG_INCLUDE_DIRS})
 link_directories(${CLOG_LIBRARY_DIRS})
 
+pkg_check_modules(BOWSPRIT REQUIRED bowsprit>=2.0.0)
+include_directories(${BOWSPRIT_INCLUDE_DIRS})
+link_directories(${BOWSPRIT_LIBRARY_DIRS})
+
 #-----------------------------------------------------------------------
 # Set some options
 

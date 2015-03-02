@@ -65,8 +65,6 @@ static int64_t  GENERATE_COUNT = DEFAULT_GENERATE_COUNT;
     fail_if_error(run_func(q, clients, &elapsed)); \
     fprintf(stdout, "Result: %" PRId64 "\n", result); \
     vrt_report_clock(elapsed, GENERATE_COUNT); \
-    vrt_report_producer(p); \
-    vrt_report_consumer(c); \
     vrt_queue_free(q);
 
 

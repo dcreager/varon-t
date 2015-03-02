@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * ----------------------------------------------------------------------
- * Copyright © 2012-2014, RedJack, LLC.
+ * Copyright © 2012-2015, RedJack, LLC.
  * All rights reserved.
  *
  * Please see the COPYING file in this distribution for license details.
@@ -9,6 +9,7 @@
 
 #include <assert.h>
 
+#include <bowsprit.h>
 #include <clogger.h>
 #include <libcork/core.h>
 #include <libcork/ds.h>
@@ -40,6 +41,21 @@ vrt_testing_mode(void)
 
 
 /*-----------------------------------------------------------------------
+ * Dummy statistics
+ */
+
+/* If a queue client doesn't provide us with a Bowsprit context, we can't create
+ * any statistics objects.  But, we want to make sure that each bws_derive
+ * pointer in our producers and consumers always points at a valid object, so
+ * that we can blindly increase them without having to add a bunch of `!= NULL`
+ * checks.  This dummy instance is what we use as a fallback.  We never read its
+ * contents, so we can reuse it for all of the queues that don't have a Bowsprit
+ * context. */
+
+static struct bws_derive  dummy_derive;
+
+
+/*-----------------------------------------------------------------------
  * Queues
  */
 
@@ -66,6 +82,7 @@ vrt_queue_new(const char *name, struct vrt_value_type *value_type,
     struct vrt_queue  *q = cork_new(struct vrt_queue);
     memset(q, 0, sizeof(struct vrt_queue));
     q->name = cork_strdup(name);
+    q->ctx = NULL;
 
     unsigned int  value_count;
     if (size == 0) {
@@ -123,6 +140,12 @@ vrt_queue_free(struct vrt_queue *q)
     cork_delete(struct vrt_queue, q);
 }
 
+void
+vrt_queue_set_bws_ctx(struct vrt_queue *q, struct bws_ctx *ctx)
+{
+    q->ctx = ctx;
+}
+
 static vrt_value_id
 vrt_minimum_cursor(vrt_consumer_array *cs)
 {
@@ -158,13 +181,13 @@ vrt_wait_for_slot(struct vrt_queue *q, struct vrt_producer *p)
         while (vrt_mod_lt(minimum, wrapped_id)) {
             clog_trace("<%s> Last consumed value is %d (wait)",
                        p->name, minimum);
-            p->yield_count++;
+            bws_derive_inc(p->yields);
             rii_check(vrt_yield_strategy_yield
                       (p->yield, first, q->name, p->name));
             first = false;
             minimum = vrt_queue_find_last_consumed_id(q);
         }
-        p->batch_count++;
+        bws_derive_inc(p->claimed_batches);
         q->last_consumed_id = minimum;
         clog_debug("<%s> Last consumed value is %d", p->name, minimum);
     }
@@ -247,6 +270,7 @@ vrt_publish_multi_threaded(struct vrt_queue *q, struct vrt_producer *p,
     while (vrt_mod_lt(current_cursor, expected_cursor)) {
         clog_trace("<%s> Last published value is %d (wait)",
                    p->name, current_cursor);
+        bws_derive_inc(p->yields);
         rii_check(vrt_yield_strategy_yield
                   (p->yield, first, q->name, p->name));
         first = false;
@@ -338,8 +362,34 @@ vrt_producer_new(const char *name, unsigned int batch_size,
     p->last_claimed_id = starting_value;
     p->batch_size = batch_size;
     p->yield = NULL;
-    p->batch_count = 0;
-    p->yield_count = 0;
+
+    if (q->ctx == NULL) {
+        p->claims = &dummy_derive;
+        p->claimed_batches = &dummy_derive;
+        p->flushes = &dummy_derive;
+        p->flushed_holes = &dummy_derive;
+        p->publishes = &dummy_derive;
+        p->published_batches = &dummy_derive;
+        p->skips = &dummy_derive;
+        p->yields = &dummy_derive;
+    } else {
+        struct bws_plugin  *plugin = bws_plugin_new(q->ctx, q->name, p->name);
+        p->claims =
+            bws_derive_new(plugin, "total_objects", "claims");
+        p->claimed_batches =
+            bws_derive_new(plugin, "total_objects", "claimed_batches");
+        p->flushes =
+            bws_derive_new(plugin, "total_objects", "flushes");
+        p->flushed_holes =
+            bws_derive_new(plugin, "total_objects", "flushed_holes");
+        p->publishes =
+            bws_derive_new(plugin, "total_objects", "publishes");
+        p->published_batches =
+            bws_derive_new(plugin, "total_objects", "published_batches");
+        p->yields =
+            bws_derive_new(plugin, "contextswitch", NULL);
+    }
+
     return p;
 
 error:
@@ -384,6 +434,7 @@ int
 vrt_producer_claim(struct vrt_producer *p, struct vrt_value **value)
 {
     struct vrt_value  *v;
+    bws_derive_inc(p->claims);
     rii_check(vrt_producer_claim_raw(p->queue, p));
     v = vrt_queue_get(p->queue, p->last_produced_id);
     v->id = p->last_produced_id;
@@ -395,7 +446,9 @@ vrt_producer_claim(struct vrt_producer *p, struct vrt_value **value)
 int
 vrt_producer_publish(struct vrt_producer *p)
 {
+    bws_derive_inc(p->publishes);
     if (p->last_produced_id == p->last_claimed_id) {
+        bws_derive_inc(p->published_batches);
         return p->publish(p->queue, p, p->last_claimed_id);
     } else {
         clog_trace("<%s> Wait to publish %d until end of batch (at %d)",
@@ -408,6 +461,7 @@ int
 vrt_producer_skip(struct vrt_producer *p)
 {
     struct vrt_value  *v;
+    bws_derive_inc(p->skips);
     clog_trace("<%s> Skip %d", p->name, p->last_produced_id);
     v = vrt_queue_get(p->queue, p->last_produced_id);
     v->special = VRT_VALUE_HOLE;
@@ -418,6 +472,7 @@ int
 vrt_producer_flush(struct vrt_producer *p)
 {
     struct vrt_value  *v;
+    bws_derive_inc(p->flushes);
 
     if (p->last_produced_id == p->last_claimed_id) {
         /* We don't have any queue entries that we've claimed but haven't used,
@@ -442,11 +497,13 @@ vrt_producer_flush(struct vrt_producer *p)
             struct vrt_value  *v = vrt_queue_get(p->queue, i);
             v->id = i;
             v->special = VRT_VALUE_HOLE;
+            bws_derive_inc(p->flushed_holes);
         }
         p->last_produced_id = p->last_claimed_id;
     }
 
     /* Then publish the whole chunk. */
+    bws_derive_inc(p->published_batches);
     return p->publish(p->queue, p, p->last_claimed_id);
 }
 
@@ -461,27 +518,6 @@ vrt_producer_eof(struct vrt_producer *p)
     v->special = VRT_VALUE_EOF;
     rii_check(vrt_producer_publish(p));
     return vrt_producer_flush(p);
-}
-
-void
-vrt_report_producer(struct vrt_producer *p)
-{
-    printf("Producer %s:\n"
-           "  Batches: %zu\n"
-           "  Yields:  %zu\n",
-           p->name, p->batch_count, p->yield_count);
-}
-
-size_t
-vrt_producer_batch_count(const struct vrt_producer *p)
-{
-    return p->batch_count;
-}
-
-size_t
-vrt_producer_yield_count(const struct vrt_producer *p)
-{
-    return p->yield_count;
 }
 
 
@@ -502,8 +538,33 @@ vrt_consumer_new(const char *name, struct vrt_queue *q)
     c->last_available_id = starting_value;
     c->current_id = starting_value;
     c->eof_count = 0;
-    c->batch_count = 0;
-    c->yield_count = 0;
+
+    if (q->ctx == NULL) {
+        c->consumed = &dummy_derive;
+        c->eofs = &dummy_derive;
+        c->flushes = &dummy_derive;
+        c->holes = &dummy_derive;
+        c->received_batches = &dummy_derive;
+        c->values = &dummy_derive;
+        c->yields = &dummy_derive;
+    } else {
+        struct bws_plugin  *plugin = bws_plugin_new(q->ctx, q->name, c->name);
+        c->consumed =
+            bws_derive_new(plugin, "total_objects", "consumed");
+        c->eofs =
+            bws_derive_new(plugin, "total_objects", "eofs");
+        c->flushes =
+            bws_derive_new(plugin, "total_objects", "flushes");
+        c->holes =
+            bws_derive_new(plugin, "total_objects", "holes");
+        c->received_batches =
+            bws_derive_new(plugin, "total_objects", "received_batches");
+        c->values =
+            bws_derive_new(plugin, "total_objects", "values");
+        c->yields =
+            bws_derive_new(plugin, "contextswitch", NULL);
+    }
+
     return c;
 
 error:
@@ -548,6 +609,7 @@ vrt_consumer_next_raw(struct vrt_queue *q, struct vrt_consumer *c)
     if (vrt_mod_le(c->current_id, c->last_available_id)) {
         clog_trace("<%s> Next value is %d (already available)",
                    c->name, c->current_id);
+        bws_derive_inc(c->consumed);
         return 0;
     }
 
@@ -568,7 +630,7 @@ vrt_consumer_next_raw(struct vrt_queue *q, struct vrt_consumer *c)
         while (vrt_mod_le(last_available_id, last_consumed_id)) {
             clog_trace("<%s> Last available value is %d (wait)",
                        c->name, last_available_id);
-            c->yield_count++;
+            bws_derive_inc(c->yields);
             rii_check(vrt_yield_strategy_yield
                       (c->yield, first, q->name, c->name));
             first = false;
@@ -589,7 +651,7 @@ vrt_consumer_next_raw(struct vrt_queue *q, struct vrt_consumer *c)
         while (vrt_mod_le(last_available_id, last_consumed_id)) {
             clog_trace("<%s> Last available value is %d (wait)",
                        c->name, last_available_id);
-            c->yield_count++;
+            bws_derive_inc(c->yields);
             rii_check(vrt_yield_strategy_yield
                       (c->yield, first, q->name, c->name));
             first = false;
@@ -600,7 +662,7 @@ vrt_consumer_next_raw(struct vrt_queue *q, struct vrt_consumer *c)
                    c->name, last_available_id);
     }
 
-    c->batch_count++;
+    bws_derive_inc(c->received_batches);
 
     /* Once we fall through to here, we know that there are additional
      * values that we can process. */
@@ -619,10 +681,12 @@ vrt_consumer_next(struct vrt_consumer *c, struct vrt_value **value)
 
         switch (v->special) {
             case VRT_VALUE_NONE:
+                bws_derive_inc(c->values);
                 *value = v;
                 return 0;
 
             case VRT_VALUE_EOF:
+                bws_derive_inc(c->eofs);
                 producer_count = cork_array_size(&c->queue->producers);
                 c->eof_count++;
                 clog_debug("<%s> Detected EOF (%u of %u) at value %d",
@@ -646,35 +710,16 @@ vrt_consumer_next(struct vrt_consumer *c, struct vrt_value **value)
 
             case VRT_VALUE_HOLE:
                 /* Repeat the loop to grab the next value. */
+                bws_derive_inc(c->holes);
                 break;
 
             case VRT_VALUE_FLUSH:
                 /* Return the FLUSH control message. */
+                bws_derive_inc(c->flushes);
                 return VRT_QUEUE_FLUSH;
 
             default:
                 cork_unreachable();
         }
     } while (true);
-}
-
-void
-vrt_report_consumer(struct vrt_consumer *c)
-{
-    printf("Consumer %s:\n"
-           "  Batches: %zu\n"
-           "  Yields:  %zu\n",
-           c->name, c->batch_count, c->yield_count);
-}
-
-size_t
-vrt_consumer_batch_count(const struct vrt_consumer *c)
-{
-    return c->batch_count;
-}
-
-size_t
-vrt_consumer_yield_count(const struct vrt_consumer *c)
-{
-    return c->yield_count;
 }
