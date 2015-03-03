@@ -1,10 +1,9 @@
 /* -*- coding: utf-8 -*-
  * ----------------------------------------------------------------------
- * Copyright © 2012, RedJack, LLC.
+ * Copyright © 2012-2015, RedJack, LLC.
  * All rights reserved.
  *
- * Please see the COPYING file in this distribution for license
- * details.
+ * Please see the COPYING file in this distribution for license details.
  * ----------------------------------------------------------------------
  */
 
@@ -62,8 +61,6 @@ unicast_test(uint32_t queue_size, uint64_t batch_size,
     run_func(q, clients, &elapsed);
     /*fprintf(stdout, "Result: %" PRId64 "\n", result);*/
     vrt_report_clock(elapsed, GENERATE_COUNT);
-    vrt_report_producer(p);
-    vrt_report_consumer(c);
     vrt_queue_free(q);
     return 0;
 }
@@ -127,10 +124,6 @@ sequencer_test(uint32_t queue_size, uint64_t batch_size,
     run_func(q, clients, &elapsed);
     /*fprintf(stdout, "Result: %" PRId64 "\n", result);*/
     vrt_report_clock(elapsed, GENERATE_COUNT);
-    vrt_report_producer(p1);
-    vrt_report_producer(p2);
-    vrt_report_producer(p3);
-    vrt_report_consumer(c);
     vrt_queue_free(q);
     return 0;
 }
@@ -183,10 +176,6 @@ multicast_test(uint32_t queue_size, uint64_t batch_size,
     run_func(q, clients, &elapsed);
     /*fprintf(stdout, "Result: %" PRId64 "\n", result);*/
     vrt_report_clock(elapsed, GENERATE_COUNT);
-    vrt_report_producer(p);
-    vrt_report_consumer(c1);
-    vrt_report_consumer(c2);
-    vrt_report_consumer(c3);
     vrt_queue_free(q);
     return 0;
 

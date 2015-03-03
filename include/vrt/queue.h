@@ -1,16 +1,16 @@
 /* -*- coding: utf-8 -*-
  * ----------------------------------------------------------------------
- * Copyright © 2012, RedJack, LLC.
+ * Copyright © 2012-2015, RedJack, LLC.
  * All rights reserved.
  *
- * Please see the COPYING file in this distribution for license
- * details.
+ * Please see the COPYING file in this distribution for license details.
  * ----------------------------------------------------------------------
  */
 
 #ifndef VRT_QUEUE_H
 #define VRT_QUEUE_H
 
+#include <bowsprit.h>
 #include <libcork/core.h>
 #include <libcork/ds.h>
 
@@ -81,6 +81,9 @@ struct vrt_queue {
 
     /** A name for the queue */
     const char  *name;
+
+    /* A Bowsprit context for this queue */
+    struct bws_ctx  *ctx;
 };
 
 /** Allocate a new queue. */
@@ -91,6 +94,11 @@ vrt_queue_new(const char *name, struct vrt_value_type *value_type,
 /** Free a queue. */
 void
 vrt_queue_free(struct vrt_queue *q);
+
+/* Have the queue keep track of various statistics using the given Bowsprit
+ * context. */
+void
+vrt_queue_set_bws_ctx(struct vrt_queue *q, struct bws_ctx *ctx);
 
 /* Compare two integers on the modular-arithmetic ring that fits into an int. */
 #define vrt_mod_lt(a, b) (0 < ((b)-(a)))
@@ -193,11 +201,31 @@ struct vrt_producer {
     /** A name for the producer */
     const char  *name;
 
-    /** The number of batches of values that we process */
-    size_t  batch_count;
+    /* The number of queue slots that we've claimed */
+    struct bws_derive  *claims;
 
-    /** The number of times we have to yield while waiting for a value */
-    size_t  yield_count;
+    /* The number of batches that we've claimed */
+    struct bws_derive  *claimed_batches;
+
+    /* The number of flush messages that we've published */
+    struct bws_derive  *flushes;
+
+    /* The number of queue slots that we've marked as holes as part of flushing
+     * a batch */
+    struct bws_derive  *flushed_holes;
+
+    /* The number of values that we've published */
+    struct bws_derive  *publishes;
+
+    /* The number of batches that we've published */
+    struct bws_derive  *published_batches;
+
+    /* The number of claimed queue slots that we've skipped without filling with
+     * a value */
+    struct bws_derive  *skips;
+
+    /* The number of times that we've yielded during a blocking operation */
+    struct bws_derive  *yields;
 };
 
 /** Allocate a new producer that will feed the given queue.  The
@@ -235,15 +263,6 @@ vrt_producer_eof(struct vrt_producer *p);
 
 int
 vrt_producer_flush(struct vrt_producer *p);
-
-void
-vrt_report_producer(struct vrt_producer *p);
-
-size_t
-vrt_producer_batch_count(const struct vrt_producer *p);
-
-size_t
-vrt_producer_yield_count(const struct vrt_producer *p);
 
 
 /*-----------------------------------------------------------------------
@@ -307,11 +326,26 @@ struct vrt_consumer {
     /** A name for the consumer */
     const char  *name;
 
-    /** The number of batches of values that we process */
-    size_t  batch_count;
+    /* The number of queue slots that we've consumed */
+    struct bws_derive  *consumed;
 
-    /** The number of times we have to yield while waiting for a value */
-    size_t  yield_count;
+    /* The number of EOF messages we've received */
+    struct bws_derive  *eofs;
+
+    /* The number of flush messages we've received */
+    struct bws_derive  *flushes;
+
+    /* The number of holes that we've received */
+    struct bws_derive  *holes;
+
+    /* The number of batches that we've received */
+    struct bws_derive  *received_batches;
+
+    /* The number of regular values that we've received */
+    struct bws_derive  *values;
+
+    /* The number of times that we've yielded during a blocking operation */
+    struct bws_derive  *yields;
 };
 
 /** Allocate a new consumer that will drain the given queue. */
@@ -355,15 +389,6 @@ vrt_consumer_set_cursor(struct vrt_consumer *c, vrt_value_id value)
 {
     vrt_padded_int_set(&c->cursor, value);
 }
-
-void
-vrt_report_consumer(struct vrt_consumer *c);
-
-size_t
-vrt_consumer_batch_count(const struct vrt_consumer *c);
-
-size_t
-vrt_consumer_yield_count(const struct vrt_consumer *c);
 
 
 #endif /* VRT_QUEUE_H */

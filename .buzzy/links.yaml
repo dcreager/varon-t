@@ -5,3 +5,6 @@
 - !git-env
   url: git://github.com/redjack/clogger.git
   commit: master
+- !git-env
+  url: git://github.com/redjack/bowsprit.git
+  commit: master
