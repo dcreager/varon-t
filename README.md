@@ -1,5 +1,7 @@
 ## Overview
 
+[![Build Status](https://img.shields.io/travis/redjack/varon-t/develop.svg)](https://travis-ci.org/redjack/varon-t)
+
 The Varon-T library is a C implementation of the
 [disruptor queue](http://code.google.com/p/disruptor/), a high performance
 messaging library based on an efficient FIFO circular queue implementation.
@@ -56,7 +58,7 @@ met:
   notice, this list of conditions and the following disclaimer.
 
 * Redistributions in binary form must reproduce the above copyright
-  notice, this list of conditions and the following disclaimer in 
+  notice, this list of conditions and the following disclaimer in
   the documentation and/or other materials provided with the
   distribution.
 
