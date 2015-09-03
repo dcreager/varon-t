@@ -11,3 +11,5 @@ varon-t.pc
 *.os
 *.so
 *.dylib
+
+!.travis.yml

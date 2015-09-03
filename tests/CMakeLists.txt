@@ -1,23 +1,12 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------
-# Copyright © 2011-2014, RedJack, LLC.
+# Copyright © 2011-2015, RedJack, LLC.
 # All rights reserved.
 #
 # Please see the COPYING file in this distribution for license details.
 # ----------------------------------------------------------------------
 
-include_directories(../include)
-include_directories(./include)
-link_directories(${CMAKE_CURRENT_BINARY_DIR}/../src)
-
-#-----------------------------------------------------------------------
-# Check for prerequisite libraries
-
-find_package(PkgConfig)
-
-pkg_check_modules(CHECK REQUIRED check)
-include_directories(${CHECK_INCLUDE_DIRS})
-link_directories(${CHECK_LIBRARY_DIRS})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 #-----------------------------------------------------------------------
 # Build the test cases
@@ -28,11 +17,17 @@ set(UTIL_SOURCES
 )
 
 macro(make_test test_name)
-    add_executable(${test_name} ${test_name}.c ${UTIL_SOURCES})
-    target_link_libraries(${test_name}
-        ${CMAKE_THREAD_LIBS_INIT}
-        ${CHECK_LIBRARIES}
-        libvrt
+    add_c_executable(
+        ${test_name}
+        SKIP_INSTALL
+        OUTPUT_NAME ${test_name}
+        SOURCES
+            ${test_name}.c
+            ${UTIL_SOURCES}
+        LIBRARIES
+            check
+        LOCAL_LIBRARIES
+            libvrt
     )
     add_test(${test_name} ${test_name})
 endmacro(make_test)

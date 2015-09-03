@@ -8,9 +8,14 @@
 
 cmake_minimum_required(VERSION 2.6)
 set(PROJECT_NAME varon-t)
-set(RELEASE_DATE 2015-03-03)
+set(RELEASE_DATE 2015-09-03)
 project(${PROJECT_NAME})
 enable_testing()
+
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+find_package(ParseArguments)
+find_package(Prereqs)
+find_package(CTargets)
 
 #-----------------------------------------------------------------------
 # Retrieve the current version number
@@ -29,7 +34,25 @@ endif(VERSION_RESULT)
 
 string(REGEX REPLACE "-dev.*" "-dev" BASE_VERSION "${VERSION}")
 
-find_package(PkgConfig)
+if(BASE_VERSION MATCHES "^([0-9]+)\\.([0-9]+)\\.([0-9]+)(-dev)?$")
+    set(VERSION_MAJOR "${CMAKE_MATCH_1}")
+    set(VERSION_MINOR "${CMAKE_MATCH_2}")
+    set(VERSION_PATCH "${CMAKE_MATCH_3}")
+else(BASE_VERSION MATCHES "^([0-9]+)\\.([0-9]+)\\.([0-9]+)(-dev)?$")
+    message(FATAL_ERROR "Invalid version number: ${VERSION}")
+endif(BASE_VERSION MATCHES "^([0-9]+)\\.([0-9]+)\\.([0-9]+)(-dev)?$")
+
+execute_process(
+    COMMAND git rev-parse HEAD
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    RESULT_VARIABLE GIT_SHA1_RESULT
+    OUTPUT_VARIABLE GIT_SHA1
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+if(GIT_SHA1_RESULT)
+    message(FATAL_ERROR
+            "Cannot determine git commit: " ${GIT_SHA1_RESULT})
+endif(GIT_SHA1_RESULT)
 
 #-----------------------------------------------------------------------
 # Check for building on Tilera
@@ -56,23 +79,6 @@ if(DEFINED ENV{TILERA_ROOT})
 endif()
 
 #-----------------------------------------------------------------------
-# Check for prerequisite libraries
-
-find_package(Threads)
-
-pkg_check_modules(CORK REQUIRED libcork>=0.14.0)
-include_directories(${CORK_INCLUDE_DIRS})
-link_directories(${CORK_LIBRARY_DIRS})
-
-pkg_check_modules(CLOG REQUIRED clogger>=0.2.0)
-include_directories(${CLOG_INCLUDE_DIRS})
-link_directories(${CLOG_LIBRARY_DIRS})
-
-pkg_check_modules(BOWSPRIT REQUIRED bowsprit>=2.0.0)
-include_directories(${BOWSPRIT_INCLUDE_DIRS})
-link_directories(${BOWSPRIT_LIBRARY_DIRS})
-
-#-----------------------------------------------------------------------
 # Set some options
 
 if(APPLE)
@@ -97,6 +103,17 @@ elseif(CMAKE_C_COMPILER_ID STREQUAL "Clang")
 elseif(CMAKE_C_COMPILER_ID STREQUAL "Intel")
     add_definitions(-Wall -Werror)
 endif(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+
+#-----------------------------------------------------------------------
+# Check for prerequisite libraries
+
+find_package(Threads)
+set(THREADS_LIBRARIES "${CMAKE_THREAD_LIBS_INIT}")
+set(THREADS_STATIC_LIBRARIES "${CMAKE_THREAD_LIBS_INIT}")
+
+pkgconfig_prereq(libcork>=0.14.0)
+pkgconfig_prereq(clogger>=0.2.0)
+pkgconfig_prereq(bowsprit>=2.0.0)
 
 #-----------------------------------------------------------------------
 # Include our subdirectories
