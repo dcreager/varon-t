@@ -1,7 +1,7 @@
 prefix=@prefix@
 exec_prefix=${prefix}
-libdir=${exec_prefix}/lib
-includedir=${prefix}/include
+libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
 sharedir=${prefix}/share
 sphinxdir=${sharedir}/doc/varon-t/html
 
@@ -10,5 +10,6 @@ Description: Extremely efficient lock-free ring buffer
 Version: @VERSION@
 URL: http://github.com/redjack/varon-t/
 Libs: -L${libdir} -lvrt
+Libs.private: @CMAKE_THREAD_LIBS_INIT@
 Cflags: -I${includedir}
 Requires: libcork >= 0.14.0, clogger >= 0.2.0, bowsprit >= 2.0.0
