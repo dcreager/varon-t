@@ -16,23 +16,25 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(ParseArguments)
 find_package(Prereqs)
 find_package(CTargets)
+include(GNUInstallDirs)
 
 #-----------------------------------------------------------------------
 # Retrieve the current version number
 
-execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/version.sh
+execute_process(
+    COMMAND git describe
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     RESULT_VARIABLE VERSION_RESULT
     OUTPUT_VARIABLE VERSION
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
 if(VERSION_RESULT)
     message(FATAL_ERROR
             "Cannot determine version number: " ${VERSION_RESULT})
 endif(VERSION_RESULT)
-# This causes an annoying extra prompt in ccmake.
-# message("Current version: " ${VERSION})
+message(STATUS "Current version: " ${VERSION})
 
-string(REGEX REPLACE "-dev.*" "-dev" BASE_VERSION "${VERSION}")
+string(REGEX REPLACE "-.*" "-dev" BASE_VERSION "${VERSION}")
 
 if(BASE_VERSION MATCHES "^([0-9]+)\\.([0-9]+)\\.([0-9]+)(-dev)?$")
     set(VERSION_MAJOR "${CMAKE_MATCH_1}")
@@ -53,30 +55,7 @@ if(GIT_SHA1_RESULT)
     message(FATAL_ERROR
             "Cannot determine git commit: " ${GIT_SHA1_RESULT})
 endif(GIT_SHA1_RESULT)
-
-#-----------------------------------------------------------------------
-# Check for building on Tilera
-# If the Tilera environment is installed, then $TILERA_ROOT is defined
-# as the path to the active MDE.
-
-if(DEFINED ENV{TILERA_ROOT})
-    set(TILERA TRUE)
-    set(TILERA_ROOT $ENV{TILERA_ROOT})
-    message("-- Configuring for Tilera MDE ${TILERA_ROOT}")
-    set(ENV{PKG_CONFIG_PATH}
-        "${TILERA_ROOT}/tile/usr/lib/pkgconfig:${TILERA_ROOT}/tile/usr/local/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}"
-    )
-    set(CMAKE_SYSTEM_NAME "Tilera")
-    set(CMAKE_SYSTEM_PROCESSOR "tilegx")
-    set(CMAKE_C_COMPILER "${TILERA_ROOT}/bin/tile-gcc")
-    set(CMAKE_LINKER "${TILERA_ROOT}/bin/tile-ld")
-    set(TILERA_MONITOR "${TILERA_ROOT}/bin/tile-monitor")
-    #add_definitions(-std=gnu99)
-    set(CMAKE_FIND_ROOT_PATH "${TILERA_ROOT}/tile")
-    set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY)
-    set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
-    set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
-endif()
+message(STATUS "Current revision: " ${GIT_SHA1})
 
 #-----------------------------------------------------------------------
 # Set some options
@@ -93,8 +72,10 @@ if(NOT CMAKE_BUILD_TYPE)
         "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel.")
 endif(NOT CMAKE_BUILD_TYPE)
 
-set(CMAKE_INSTALL_LIBDIR lib CACHE STRING
-    "The base name of the installation directory for libraries")
+if(NOT CMAKE_INSTALL_LIBDIR)
+    set(CMAKE_INSTALL_LIBDIR lib CACHE STRING
+        "The base name of the installation directory for libraries")
+endif(NOT CMAKE_INSTALL_LIBDIR)
 
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
     add_definitions(-Wall -Werror)
@@ -108,8 +89,8 @@ endif(CMAKE_C_COMPILER_ID STREQUAL "GNU")
 # Check for prerequisite libraries
 
 find_package(Threads)
-set(THREADS_LIBRARIES "${CMAKE_THREAD_LIBS_INIT}")
-set(THREADS_STATIC_LIBRARIES "${CMAKE_THREAD_LIBS_INIT}")
+set(THREADS_LDFLAGS "${CMAKE_THREAD_LIBS_INIT}")
+set(THREADS_STATIC_LDFLAGS "${CMAKE_THREAD_LIBS_INIT}")
 
 pkgconfig_prereq(libcork>=0.14.0)
 pkgconfig_prereq(clogger>=0.2.0)

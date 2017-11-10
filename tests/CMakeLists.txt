@@ -26,6 +26,7 @@ macro(make_test test_name)
             ${UTIL_SOURCES}
         LIBRARIES
             check
+            threads
         LOCAL_LIBRARIES
             libvrt
     )
@@ -37,10 +38,6 @@ make_test(test-vrt)
 
 #-----------------------------------------------------------------------
 # Command-line tests
-
-if(TILERA)
-    configure_file(tile-test ${CMAKE_BINARY_DIR}/tile-test COPYONLY)
-endif(TILERA)
 
 find_package(PythonInterp)
 
