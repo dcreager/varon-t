@@ -8,7 +8,7 @@ before_install:
   # Buzzy to build/test the package.
   - git fetch
   # Download and install Buzzy
-  - wget https://github.com/dcreager/buzzy/releases/download/0.6.0/buzzy_0.6.0_trusty_amd64.deb -O buzzy.deb
+  - wget https://github.com/dcreager/buzzy/releases/download/0.6.0/ubuntu.trusty.buzzy_0.6.0_amd64.deb -O buzzy.deb
   - sudo dpkg -i buzzy.deb
 script: buzzy test
 
