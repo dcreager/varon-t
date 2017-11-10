@@ -22,10 +22,6 @@ If you want to build the documentation, you also need:
 
   * [Sphinx](http://sphinx.pocoo.org/)
 
-If you want to run all of the test cases, you also need:
-
-  * [cram](http://pypi.python.org/pypi/cram/)
-
 The Varon-T library uses [CMake](http://www.cmake.org) as its build manager.
 In most cases, you should be able to build the library from source code using
 the following commands from the top level of your copy of the source tree:
