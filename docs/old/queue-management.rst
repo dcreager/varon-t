@@ -50,7 +50,7 @@ A Varon-T distruptor queue is defined by the following interface:
     .. member:: struct vrt_padded_int  last_claimed_id
 
         The ID of the last value instance claimed by a producer. This is only
-        updated for disruptor queues with multiple produceds. It is expected
+        updated for disruptor queues with multiple producers. It is expected
         that single producer disruptor queues will track this value internal
         to the producer instance.
 

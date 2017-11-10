@@ -1,7 +1,6 @@
 /build/
 /.build/
 
-RELEASE-VERSION
 varon-t.pc
 
 /varon-t*.tar.gz
